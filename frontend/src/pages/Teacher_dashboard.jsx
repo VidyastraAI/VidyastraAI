@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
@@ -7,61 +8,13 @@ const TeacherDashboard = () => {
   // Tab State
   const [activeTab, setActiveTab] = useState('courses'); // 'courses', 'grading', 'announcements', 'profile'
 
-  // Courses State
-  const [courses, setCourses] = useState([
-    {
-      id: 'CS302',
-      name: 'Database Management Systems',
-      semester: '4th Semester',
-      students: 58,
-      code: 'CS302',
-      schedule: 'Mon, Wed, Fri (10:00 AM)',
-      lectures: [
-        { id: 1, title: 'Lecture 1: Introduction to DBMS & Relational Model', type: 'PDF Slides', date: '2026-05-10', url: '#' },
-        { id: 2, title: 'Lecture 2: ER Diagrams & Schema Normalization', type: 'Video Link', date: '2026-05-18', url: '#' }
-      ]
-    },
-    {
-      id: 'CS401',
-      name: 'Artificial Intelligence',
-      semester: '6th Semester',
-      students: 45,
-      code: 'CS401',
-      schedule: 'Tue, Thu (02:00 PM)',
-      lectures: [
-        { id: 1, title: 'Lecture 1: Search Algorithms (A*, BFS, DFS)', type: 'PDF Slides', date: '2026-05-12', url: '#' },
-        { id: 2, title: 'Lecture 2: Introduction to Neural Networks', type: 'Notes', date: '2026-05-20', url: '#' }
-      ]
-    },
-    {
-      id: 'CS201',
-      name: 'Data Structures & Algorithms',
-      semester: '3rd Semester',
-      students: 62,
-      code: 'CS201',
-      schedule: 'Mon, Wed (11:30 AM)',
-      lectures: [
-        { id: 1, title: 'Lecture 1: Time Complexity Analysis & Arrays', type: 'Notes', date: '2026-05-02', url: '#' }
-      ]
-    }
-  ]);
-
-  // Grading Queue State
-  const [submissions, setSubmissions] = useState([
-    { id: 1, studentName: 'Aman Sharma', rollNo: '22103045', courseCode: 'CS302', assignmentName: 'Assignment 1: Schema Design', fileName: 'schema_design_v2.pdf', date: '2026-06-05', marks: '', feedback: '', status: 'Pending' },
-    { id: 2, studentName: 'Divya Patel', rollNo: '22103061', courseCode: 'CS401', assignmentName: 'Assignment 2: A* Implementation', fileName: 'astar_code.zip', date: '2026-06-06', marks: '', feedback: '', status: 'Pending' },
-    { id: 3, studentName: 'Rohan Verma', rollNo: '22103088', courseCode: 'CS201', assignmentName: 'Assignment 1: Linked Lists', fileName: 'linked_list.cpp', date: '2026-06-04', marks: '', feedback: '', status: 'Pending' }
-  ]);
-
-  const [gradedSubmissions, setGradedSubmissions] = useState([
-    { id: 4, studentName: 'Pooja Singh', rollNo: '22103012', courseCode: 'CS302', assignmentName: 'Assignment 1: Schema Design', fileName: 'db_assignment_final.pdf', date: '2026-06-03', marks: '92', feedback: 'Great work on database normalization constraints.', status: 'Graded' }
-  ]);
-
-  // Announcements State
-  const [announcements, setAnnouncements] = useState([
-    { id: 1, title: 'Mid-Sem Syllabus Update', content: 'The Mid-Semester exam syllabus for DBMS (CS302) will cover Chapters 1 to 5.', courseCode: 'CS302', date: '2026-06-02' },
-    { id: 2, title: 'Lab Assignment Extension', content: 'The deadline for AI Lab Assignment 2 has been extended to June 10th.', courseCode: 'CS401', date: '2026-06-07' }
-  ]);
+  // Dynamic States loaded from API
+  const [profile, setProfile] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [gradedSubmissions, setGradedSubmissions] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Modal / Form States
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -73,7 +26,7 @@ const TeacherDashboard = () => {
   // Announcement Form State
   const [newAnnTitle, setNewAnnTitle] = useState('');
   const [newAnnContent, setNewAnnContent] = useState('');
-  const [newAnnCourse, setNewAnnCourse] = useState('CS302');
+  const [newAnnCourse, setNewAnnCourse] = useState('');
 
   // Interactive Toast Notifications
   const [toastMessage, setToastMessage] = useState('');
@@ -85,8 +38,50 @@ const TeacherDashboard = () => {
     }, 4000);
   };
 
+  const loadDashboardData = () => {
+    return Promise.all([
+      api.getTeacherProfile(),
+      api.getCourses(),
+      api.getSubmissions(),
+      api.getAnnouncements()
+    ])
+      .then(([profileData, coursesData, submissionsData, announcementsData]) => {
+        setProfile(profileData);
+
+        // Filter courses assigned to this teacher
+        const teacherCourses = coursesData.filter(c => c.teacherId === profileData.id);
+        setCourses(teacherCourses);
+
+        // Default the announcement form course to the first course code
+        if (teacherCourses.length > 0 && !newAnnCourse) {
+          setNewAnnCourse(teacherCourses[0].code);
+        }
+
+        const courseCodes = teacherCourses.map(c => c.code);
+
+        // Submissions
+        setSubmissions(submissionsData.filter(s => s.status === 'Pending' && courseCodes.includes(s.courseCode)));
+        setGradedSubmissions(submissionsData.filter(s => s.status === 'Graded' && courseCodes.includes(s.courseCode)));
+
+        // Announcements
+        setAnnouncements(announcementsData.filter(a => courseCodes.includes(a.courseCode)));
+
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load teacher dashboard data', err);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
   const handleLogout = () => {
-    navigate('/');
+    api.logout().then(() => {
+      navigate('/');
+    });
   };
 
   // Lecture Upload Handler
@@ -110,28 +105,15 @@ const TeacherDashboard = () => {
       return;
     }
 
-    const newLecture = {
-      id: Date.now(),
-      title: lectureTitle,
-      type: lectureType,
-      date: new Date().toISOString().split('T')[0],
-      url: lectureUrl.trim() || '#'
-    };
-
-    setCourses(prevCourses =>
-      prevCourses.map(course => {
-        if (course.code === selectedCourseForUpload.code) {
-          return {
-            ...course,
-            lectures: [...course.lectures, newLecture]
-          };
-        }
-        return course;
+    api.uploadLecture(selectedCourseForUpload.code, lectureTitle, lectureType, lectureUrl.trim())
+      .then(() => {
+        triggerToast(`Successfully uploaded "${lectureTitle}" to ${selectedCourseForUpload.code}!`);
+        closeUploadModal();
+        return loadDashboardData();
       })
-    );
-
-    triggerToast(`Successfully uploaded "${lectureTitle}" to ${selectedCourseForUpload.code}!`);
-    closeUploadModal();
+      .catch(err => {
+        triggerToast('Failed to upload lecture: ' + err.message);
+      });
   };
 
   // Grading Handler
@@ -141,19 +123,14 @@ const TeacherDashboard = () => {
       return;
     }
 
-    const submissionToGrade = submissions.find(s => s.id === submissionId);
-    if (!submissionToGrade) return;
-
-    const updatedSubmission = {
-      ...submissionToGrade,
-      marks: marks,
-      feedback: feedback || 'No comments.',
-      status: 'Graded'
-    };
-
-    setSubmissions(prev => prev.filter(s => s.id !== submissionId));
-    setGradedSubmissions(prev => [updatedSubmission, ...prev]);
-    triggerToast(`Graded submission for ${submissionToGrade.studentName} successfully!`);
+    api.gradeSubmission(submissionId, parseInt(marks), feedback)
+      .then(() => {
+        triggerToast(`Graded submission successfully!`);
+        return loadDashboardData();
+      })
+      .catch(err => {
+        triggerToast('Failed to grade: ' + err.message);
+      });
   };
 
   // Announcement Handler
@@ -164,22 +141,31 @@ const TeacherDashboard = () => {
       return;
     }
 
-    const newAnnouncement = {
-      id: Date.now(),
-      title: newAnnTitle,
-      content: newAnnContent,
-      courseCode: newAnnCourse,
-      date: new Date().toISOString().split('T')[0]
-    };
-
-    setAnnouncements(prev => [newAnnouncement, ...prev]);
-    setNewAnnTitle('');
-    setNewAnnContent('');
-    triggerToast('New announcement published successfully!');
+    api.createAnnouncement(newAnnTitle, newAnnContent, newAnnCourse)
+      .then(() => {
+        setNewAnnTitle('');
+        setNewAnnContent('');
+        triggerToast('New announcement published successfully!');
+        return loadDashboardData();
+      })
+      .catch(err => {
+        triggerToast('Failed to announce: ' + err.message);
+      });
   };
 
   // Computed values
   const totalStudents = courses.reduce((sum, course) => sum + course.students, 0);
+
+  if (loading) {
+    return (
+      <div className="bg-[#e9ecef] font-sans min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#003A6A] mx-auto"></div>
+          <p className="text-[#003A6A] mt-4 font-semibold">Loading Faculty Panel...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#e9ecef] font-sans min-h-screen flex flex-col relative text-[#333]">
@@ -229,11 +215,11 @@ const TeacherDashboard = () => {
             {/* Quick user welcome badge on header */}
             <div className="hidden md:flex items-center gap-3 text-white">
               <div className="text-right">
-                <p className="font-semibold text-sm">Dr. Urvashi</p>
-                <p className="text-xs text-yellow-300">Assistant Professor</p>
+                <p className="font-semibold text-sm">{profile?.name || 'Dr. Urvashi'}</p>
+                <p className="text-xs text-yellow-300">{profile?.details?.title || 'Assistant Professor'}</p>
               </div>
               <div className="w-10 h-10 rounded-full bg-blue-800 border-2 border-[#FECD0B] flex items-center justify-center font-bold text-lg text-[#FECD0B]">
-                VK
+                {profile?.name ? profile.name.split(' ').map(n => n[0]).join('') : 'U'}
               </div>
             </div>
           </div>
@@ -368,11 +354,10 @@ const TeacherDashboard = () => {
                                 <div>
                                   <p className="text-xs font-bold text-gray-800 line-clamp-1">{lec.title}</p>
                                   <div className="flex items-center space-x-2 mt-1">
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-medium ${
-                                      lec.type === 'PDF Slides' ? 'bg-red-50 text-red-700 border border-red-200' :
-                                      lec.type === 'Video Link' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                                      'bg-amber-50 text-amber-700 border border-amber-200'
-                                    }`}>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-medium ${lec.type === 'PDF Slides' ? 'bg-red-50 text-red-700 border border-red-200' :
+                                        lec.type === 'Video Link' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                          'bg-amber-50 text-amber-700 border border-amber-200'
+                                      }`}>
                                       {lec.type}
                                     </span>
                                     <span className="text-[10px] text-gray-400">📅 {lec.date}</span>
@@ -552,10 +537,10 @@ const TeacherDashboard = () => {
                 {/* Profile Avatar Card */}
                 <div className="bg-gray-50 border rounded-xl p-5 text-center flex flex-col items-center justify-center">
                   <div className="w-24 h-24 rounded-full bg-blue-800 border-4 border-[#FECD0B] flex items-center justify-center font-bold text-3xl text-[#FECD0B] shadow-md mb-4">
-                    VK
+                    {profile?.name ? profile.name.split(' ').map(n => n[0]).join('') : 'VK'}
                   </div>
-                  <h3 className="text-lg font-bold text-[#003A6A]">Dr. Urvashi</h3>
-                  <p className="text-sm text-gray-500 font-medium">Assistant Professor</p>
+                  <h3 className="text-lg font-bold text-[#003A6A]">{profile?.name || 'Dr. Urvashi'}</h3>
+                  <p className="text-sm text-gray-500 font-medium">{profile?.details?.title || 'Assistant Professor'}</p>
                   <span className="inline-block mt-3 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-3 py-0.5 rounded-full font-semibold">
                     Active Faculty Role
                   </span>
@@ -565,27 +550,27 @@ const TeacherDashboard = () => {
                 <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-gray-50 border p-4 rounded-lg">
                     <span className="text-xs text-gray-400 block font-semibold">Faculty ID</span>
-                    <span className="font-semibold text-gray-800 text-md">--------</span>
+                    <span className="font-semibold text-gray-800 text-md">{profile?.details?.facultyId || 'N/A'}</span>
                   </div>
                   <div className="bg-gray-50 border p-4 rounded-lg">
                     <span className="text-xs text-gray-400 block font-semibold">Department</span>
-                    <span className="font-semibold text-gray-800 text-md">Computer Science & Engineering</span>
+                    <span className="font-semibold text-gray-800 text-md">{profile?.department || 'N/A'}</span>
                   </div>
                   <div className="bg-gray-50 border p-4 rounded-lg">
                     <span className="text-xs text-gray-400 block font-semibold">Email Address</span>
-                    <span className="font-semibold text-gray-800 text-md">urvashi7@nitj.ac.in</span>
+                    <span className="font-semibold text-gray-800 text-md">{profile?.email || 'N/A'}</span>
                   </div>
                   <div className="bg-gray-50 border p-4 rounded-lg">
                     <span className="text-xs text-gray-400 block font-semibold">Office Address</span>
-                    <span className="font-semibold text-gray-800 text-md">-----------</span>
+                    <span className="font-semibold text-gray-800 text-md">---------</span>
                   </div>
                   <div className="bg-gray-50 border p-4 rounded-lg">
                     <span className="text-xs text-gray-400 block font-semibold">Official Phone</span>
-                    <span className="font-semibold text-gray-800 text-md">+91 --------</span>
+                    <span className="font-semibold text-gray-800 text-md">+91----------</span>
                   </div>
                   <div className="bg-gray-50 border p-4 rounded-lg">
                     <span className="text-xs text-gray-400 block font-semibold">Joined Institute</span>
-                    <span className="font-semibold text-gray-800 text-md">------</span>
+                    <span className="font-semibold text-gray-800 text-md">--------</span>
                   </div>
                 </div>
               </div>

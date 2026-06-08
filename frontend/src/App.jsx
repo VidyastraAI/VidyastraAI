@@ -6,6 +6,7 @@ import VidyastraLogin from './pages/loginpage.jsx';
 import ForgotPassword from './pages/forgot_password.jsx';
 import StudentDashboard from './pages/Student_dashboard.jsx';
 import TeacherDashboard from './pages/Teacher_dashboard.jsx';
+import AdminDashboard from './pages/Admin_dashboard.jsx';
 
 function App() {
   return (
@@ -22,6 +23,9 @@ function App() {
 
         {/* The Teacher dashboard page */}
         <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+
+        {/* The Admin dashboard page */}
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
       </Routes>
     </BrowserRouter>
   );
