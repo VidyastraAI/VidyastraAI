@@ -101,7 +101,7 @@ Instead of manually reading lengthy documents, students can upload educational r
                     │ Notes / Q&A / Quiz │
                     │ Personalized Output│
                     └────────────────────┘
-
+```
 ## 🧠 AI Workflow
 
 ### Step 1: Content Upload
@@ -210,7 +210,7 @@ Response Generation
      │
      ▼
 Notes | Quizzes | Q&A | Flashcards
-
+```
 
 ## 🤖 Core AI Components
 
