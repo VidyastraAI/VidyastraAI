@@ -1,6 +1,6 @@
 # 🎓 VidyAstra AI
 
-> An AI-powered learning platform that transforms educational content into intelligent, interactive, and personalized learning experiences using OCR, Computer Vision, Retrieval-Augmented Generation (RAG), and Large Language Models (LLMs).
+> An AI-powered personalized learning platform of NITJ that transforms educational content into intelligent, interactive, and personalized learning experiences using OCR, Computer Vision, Retrieval-Augmented Generation (RAG), and Large Language Models (LLMs).
 
 ---
 
