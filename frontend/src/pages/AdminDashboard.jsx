@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import api from '../services/api';
 import { 
   GraduationCap, 
   LayoutDashboard, 
@@ -30,15 +31,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [toast, setToast] = useState(null);
 
   // Users Directory State
-  const [usersList, setUsersList] = useState([
-    { id: 1, name: 'Dr. Sarah Verma', email: 'sarah.verma@nitj.ac.in', role: 'Faculty', status: 'Active', dept: 'CSE' },
-    { id: 2, name: 'Dr. Amit Singh', email: 'amit.singh@nitj.ac.in', role: 'Faculty', status: 'Active', dept: 'CSE' },
-    { id: 3, name: 'Dr. Neha Gupta', email: 'neha.gupta@nitj.ac.in', role: 'Faculty', status: 'Active', dept: 'IT' },
-    { id: 4, name: 'Aarav Sharma', email: 'aarav.sharma@nitj.ac.in', role: 'Student', status: 'Active', roll: '24103011' },
-    { id: 5, name: 'Riya Verma', email: 'riya.verma@nitj.ac.in', role: 'Student', status: 'Active', roll: '24103012' },
-    { id: 6, name: 'Karan Mehta', email: 'karan.mehta@nitj.ac.in', role: 'Student', status: 'Inactive', roll: '24103013' },
-    { id: 7, name: 'System Administrator', email: 'admin@vidyastra.ai', role: 'Admin', status: 'Active' },
-  ]);
+  const [usersList, setUsersList] = useState([]);
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('All');
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -54,66 +47,49 @@ const AdminDashboard = ({ user, onLogout }) => {
   });
 
   // Course Catalog State
-  const [coursesList] = useState([
-    { code: 'CS201', name: 'Data Structures & Algorithms', category: 'DSA', instructor: 'Dr. Sarah Verma', enrollments: 45 },
-    { code: 'CS202', name: 'Database Management Systems', category: 'DBMS', instructor: 'Dr. Sarah Verma', enrollments: 38 },
-    { code: 'CS203', name: 'Operating Systems', category: 'OS', instructor: 'Dr. Amit Singh', enrollments: 40 },
-    { code: 'CS204', name: 'Computer Networks', category: 'CN', instructor: 'Dr. Neha Gupta', enrollments: 32 },
-    { code: 'MA201', name: 'Discrete Mathematics', category: 'Math', instructor: 'Dr. Rajesh Kumar', enrollments: 55 },
-  ]);
+  const [coursesList, setCoursesList] = useState([]);
   const [courseSearch, setCourseSearch] = useState('');
-
-  // Content Moderation Queue State
-  const [moderationQueue, setModerationQueue] = useState([
-    { id: 101, title: 'B-Trees & Balanced Graph Traversals.pdf', submittedBy: 'Dr. Sarah Verma', date: '2026-06-14', size: '2.8 MB', type: 'PDF Notes', course: 'CS201' },
-    { id: 102, title: 'CPU Scheduling Simulation Module', submittedBy: 'Dr. Amit Singh', date: '2026-06-13', size: '4.1 MB', type: 'Lab Script', course: 'CS203' },
-    { id: 103, title: 'Computer Networks Assignment 2 - IP Subnetting', submittedBy: 'Dr. Neha Gupta', date: '2026-06-12', size: '1.5 MB', type: 'Assignment Task', course: 'CS204' },
-    { id: 104, title: 'SQL Joins & Complex Subqueries Cheat Sheet', submittedBy: 'Dr. Sarah Verma', date: '2026-06-11', size: '920 KB', type: 'Revision Notes', course: 'CS202' },
-  ]);
-
-  // Notifications State
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "System Alert: Storage utilization reached 64.2%.", time: "10 mins ago", read: false, type: 'warning' },
-    { id: 2, text: "New Faculty account registered: Dr. Rajesh Kumar.", time: "2 hours ago", read: false, type: 'info' },
-    { id: 3, text: "Weekly automated database backup finished successfully.", time: "1 day ago", read: true, type: 'success' },
-    { id: 4, text: "High latency spikes detected on GPU translation models.", time: "2 days ago", read: true, type: 'warning' },
-    { id: 5, text: "Configuration updated for SendGrid SMTP connector.", time: "3 days ago", read: true, type: 'success' }
-  ]);
-
-  // AI Inference & Latency State
-  const [aiSettings, setAiSettings] = useState({
-    fallbackToPro: true,
-    cacheResponses: true,
-    maxTokenLimit: 10000000,
-    tokensUsed: 4218500,
-    geminiStatus: 'Operational',
-    whisperStatus: 'Operational',
-    summarizerStatus: 'Operational',
-    avgLatency: 840
+  const [showAddCourseModal, setShowAddCourseModal] = useState(false);
+  const [newCourse, setNewCourse] = useState({
+    code: '',
+    name: '',
+    semester: '4th Semester',
+    department: 'Computer Science',
+    instructor: '',
+    schedule: '',
+    enrollments: 0
   });
 
+  // Content Moderation Queue State
+  const [moderationQueue, setModerationQueue] = useState([]);
+
+  // Notifications State
+  const [notifications, setNotifications] = useState([]);
+
+  // AI Inference & Latency State
+  const [aiSettings, setAiSettings] = useState(null);
+
+  // Database-backed Admin States
+  const [overviewStats, setOverviewStats] = useState(null);
+  const [systemHealth, setSystemHealth] = useState(null);
+  const [dailySessions, setDailySessions] = useState([]);
+  const [modelRatios, setModelRatios] = useState(null);
+
   // System Logs & Backups Console State
-  const [terminalLogs, setTerminalLogs] = useState([
-    '[2026-06-15 12:00:01] [SYSTEM] Vidyastra AI Admin Shell v2.4 initialized.',
-    '[2026-06-15 12:00:03] [DATABASE] DB pool connected. Active sessions: 14.',
-    '[2026-06-15 12:01:10] [GATEWAY] Auth API response: 200 OK.',
-    '[2026-06-15 12:02:45] [AI-MODULE] Warm startup finished for Gemini 1.5 Flash.',
-    '[2026-06-15 12:05:12] [BACKUP] Automated daily snapshot backup_20260615_0400.tar.gz saved (42.4 MB).',
-    '[2026-06-15 12:07:30] [INFO] Heartbeat response from translation worker: OK.'
-  ]);
+  const [terminalLogs, setTerminalLogs] = useState([]);
   const [isBackupRunning, setIsBackupRunning] = useState(false);
 
   // Settings Fields
   const [settingsForm, setSettingsForm] = useState({
-    siteTitle: 'Vidyastra AI Platform',
-    adminEmail: 'admin@vidyastra.ai',
-    smtpHost: 'smtp.mailgun.org',
-    smtpPort: '587',
-    smtpUser: 'postmaster@mg.vidyastra.ai',
-    smtpPass: '••••••••••••••••••••••',
-    notifyOnNewUsers: true,
-    requireEmailVerification: true,
-    moderationAlerts: true
+    siteTitle: '',
+    adminEmail: '',
+    smtpHost: '',
+    smtpPort: '',
+    smtpUser: '',
+    smtpPass: '',
+    notifyOnNewUsers: false,
+    requireEmailVerification: false,
+    moderationAlerts: false
   });
 
   // Scroll to bottom of terminal console
@@ -130,103 +106,264 @@ const AdminDashboard = ({ user, onLogout }) => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Simulate scrolling live console logs when view is active
+  // ----------------------------------------------------
+  // DATA FETCHING & API EFFECTS FOR ADMIN MODULES
+  // ----------------------------------------------------
+
+  // 1. Fetch Overview Stats & System Health (Dashboard Module)
+  const fetchOverviewStats = async () => {
+    try {
+      const stats = await api.getOverviewStats();
+      setOverviewStats(stats);
+    } catch (err) {
+      console.error("Failed to fetch dashboard overview metrics:", err);
+    }
+  };
+
+  const fetchSystemHealth = async () => {
+    try {
+      const health = await api.getSystemHealth();
+      setSystemHealth(health);
+    } catch (err) {
+      console.error("Failed to fetch system health status:", err);
+    }
+  };
+
   useEffect(() => {
-    if (activeTab !== 'system') return;
-    const logPool = [
-      'GET /api/v1/courses - 200 OK (12ms)',
-      'POST /api/v1/auth/refresh - 200 OK (5ms)',
-      'Gemini API request successful. Tokens: 1245 prompt, 385 completion.',
-      'Tutor Session 88241: Updated student feedback vector store.',
-      'GET /api/v1/lectures/archive - 200 OK (22ms)',
-      'Whisper translation worker finished transcript file task_20412.wav.',
-      'GET /api/v1/admin/health - 200 OK (8ms)',
-      'Redis server cache hit: dashboard_metrics (0.4ms)',
-      'SMTP Dispatcher: Welcome email scheduled for user rohan.sharma@vidyastra.ai'
-    ];
+    fetchOverviewStats();
+    fetchSystemHealth();
 
-    const interval = setInterval(() => {
-      const randomLog = logPool[Math.floor(Math.random() * logPool.length)];
-      const now = new Date().toLocaleTimeString();
-      setTerminalLogs(prev => [...prev, `[${now}] [LOG] ${randomLog}`]);
-    }, 3000);
-
+    // Poll system health every 15 seconds to keep dashboard alive
+    const interval = setInterval(fetchSystemHealth, 15000);
     return () => clearInterval(interval);
+  }, []);
+
+  // 2. Fetch Course Catalog (Course Management Module)
+  const fetchCourses = async () => {
+    try {
+      const data = await api.getCourses();
+      const mapped = data.map(c => ({
+        ...c,
+        id: c._id || c.id,
+        category: c.department || c.semester || '',
+        instructor: c.instructor || '',
+      }));
+      setCoursesList(mapped);
+    } catch (err) {
+      console.error("Failed to load courses:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'courses' || activeTab === 'dashboard') {
+      fetchCourses();
+    }
   }, [activeTab]);
 
+  // Fetch Users (User Management Module)
+  const fetchUsers = async () => {
+    try {
+      const data = await api.getUsers();
+      const roleMap = { student: 'Student', teacher: 'Faculty', admin: 'Admin' };
+      const mapped = data.map(u => ({
+        ...u,
+        id: u._id || u.id,
+        role: roleMap[u.role?.toLowerCase()] || u.role || 'Student',
+        dept: u.department || u.dept || '',
+        roll: u.details?.rollNo || u.roll || '',
+        status: u.status || 'Active',
+      }));
+      setUsersList(mapped);
+    } catch (err) {
+      console.error("Failed to load users:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'users' || activeTab === 'dashboard') {
+      fetchUsers();
+    }
+  }, [activeTab]);
+
+  // 3. Fetch Moderation Queue (Content Moderation Module)
+  const fetchModerationQueue = async () => {
+    try {
+      const queue = await api.getModerationQueue();
+      setModerationQueue(queue);
+    } catch (err) {
+      console.error("Failed to load moderation queue:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'moderation' || activeTab === 'dashboard') {
+      fetchModerationQueue();
+    }
+  }, [activeTab]);
+
+  // 4. Fetch AI Engine Settings (AI Management Module)
+  const fetchAISettings = async () => {
+    try {
+      const settings = await api.getAISettings();
+      setAiSettings(settings);
+    } catch (err) {
+      console.error("Failed to load AI engine settings:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'ai') {
+      fetchAISettings();
+    }
+  }, [activeTab]);
+
+  // 5. Fetch Performance Analytics (Analytics Module)
+  const fetchAnalytics = async () => {
+    try {
+      const [sessions, ratios] = await Promise.all([
+        api.getDailySessions(),
+        api.getModelRatios()
+      ]);
+      setDailySessions(sessions);
+      setModelRatios(ratios);
+    } catch (err) {
+      console.error("Failed to load analytics charts metrics:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'analytics') {
+      fetchAnalytics();
+    }
+  }, [activeTab]);
+
+  // System logs — backend module not configured yet
+  // When SystemManagement backend is implemented, replace with API polling:
+  // useEffect(() => { if (activeTab === 'system') fetchSystemLogs(); }, [activeTab]);
+
   // Actions handlers
-  const handleApproveResource = (id, title) => {
-    setModerationQueue(prev => prev.filter(item => item.id !== id));
-    triggerToast(`"${title}" approved and published to classroom library!`);
+  const handleApproveResource = async (id, title) => {
+    try {
+      const res = await api.approveResource(id);
+      if (res.success) {
+        setModerationQueue(prev => prev.filter(item => item._id !== id && item.id !== id));
+        triggerToast(`"${title}" approved and published to classroom library!`);
+      } else {
+        triggerToast("Failed to approve resource", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast(err.message || "Failed to approve resource", "error");
+    }
   };
 
-  const handleRejectResource = (id, title) => {
-    setModerationQueue(prev => prev.filter(item => item.id !== id));
-    triggerToast(`"${title}" rejected. Notification sent to instructor.`, 'info');
+  const handleRejectResource = async (id, title) => {
+    try {
+      const res = await api.rejectResource(id);
+      if (res.success) {
+        setModerationQueue(prev => prev.filter(item => item._id !== id && item.id !== id));
+        triggerToast(`"${title}" rejected. Notification sent to instructor.`, 'info');
+      } else {
+        triggerToast("Failed to reject resource", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast(err.message || "Failed to reject resource", "error");
+    }
   };
 
-  const handleAddUserSubmit = (e) => {
+  const handleAddUserSubmit = async (e) => {
     e.preventDefault();
     if (!newUser.name || !newUser.email) {
       triggerToast("Please provide user name and email", "info");
       return;
     }
 
-    const createdUser = {
-      id: Date.now(),
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-      status: 'Active',
-      dept: newUser.role === 'Faculty' ? newUser.dept : undefined,
-      roll: newUser.role === 'Student' ? (newUser.roll || `2410${Math.floor(Math.random() * 9000 + 1000)}`) : undefined
-    };
+    try {
+      const res = await api.addUser({
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        password: newUser.password || 'password123',
+        dept: newUser.dept,
+        roll: newUser.roll
+      });
+      const roleMap = { student: 'Student', teacher: 'Faculty', admin: 'Admin' };
+      const mappedUser = { ...res, id: res._id || res.id, role: roleMap[res.role?.toLowerCase()] || newUser.role, dept: res.department || newUser.dept, roll: res.details?.rollNo || newUser.roll, status: res.status || 'Active' };
+      setUsersList(prev => [mappedUser, ...prev]);
+      setShowAddUserModal(false);
+      triggerToast(`User "${newUser.name}" successfully registered as ${newUser.role}!`);
+      // Reset form
+      setNewUser({
+        name: '',
+        email: '',
+        role: 'Student',
+        password: '',
+        dept: 'CSE',
+        roll: ''
+      });
+    } catch (err) {
+      triggerToast(err.message || "Failed to add user", "error");
+    }
+  };
 
-    setUsersList(prev => [createdUser, ...prev]);
-    setShowAddUserModal(false);
-    triggerToast(`User "${newUser.name}" successfully registered as ${newUser.role}!`);
-    // Reset form
-    setNewUser({
-      name: '',
-      email: '',
-      role: 'Student',
-      password: '',
-      dept: 'CSE',
-      roll: ''
-    });
+  const handleAddCourseSubmit = async (e) => {
+    e.preventDefault();
+    if (!newCourse.code || !newCourse.name) {
+      triggerToast("Course code and name are required.", "info");
+      return;
+    }
+
+    try {
+      const res = await api.addCourse(newCourse);
+      if (res.success) {
+        const mappedCourse = { ...res.course, id: res.course._id || res.course.id, category: res.course.department || '', instructor: res.course.instructor || '' };
+        setCoursesList(prev => [...prev, mappedCourse]);
+        setShowAddCourseModal(false);
+        triggerToast(`Course "${newCourse.name}" registered successfully!`);
+        // Reset form
+        setNewCourse({
+          code: '',
+          name: '',
+          semester: '4th Semester',
+          department: 'Computer Science',
+          instructor: '',
+          schedule: '',
+          enrollments: 0
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast(err.message || "Failed to create course", "error");
+    }
+  };
+
+  const handleToggleAISetting = async (field) => {
+    if (!aiSettings) return;
+    const updated = {
+      ...aiSettings,
+      [field]: !aiSettings[field]
+    };
+    try {
+      setAiSettings(updated);
+      await api.updateAISettings(updated);
+      triggerToast(`AI configuration updated successfully!`);
+    } catch (err) {
+      console.error(err);
+      triggerToast("Failed to update AI configuration", "error");
+    }
   };
 
   const triggerManualBackup = () => {
     if (isBackupRunning) return;
     setIsBackupRunning(true);
-    triggerToast("Starting manual backup snapshot...");
-    
-    setTerminalLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] [BACKUP] Initiating manual backup snapshot...`]);
-
-    setTimeout(() => {
-      setTerminalLogs(prev => [
-        ...prev, 
-        `[${new Date().toLocaleTimeString()}] [BACKUP] Compressing storage directories...`,
-        `[${new Date().toLocaleTimeString()}] [BACKUP] Writing database snapshot SQL file...`
-      ]);
-    }, 1000);
-
-    setTimeout(() => {
-      setTerminalLogs(prev => [
-        ...prev, 
-        `[${new Date().toLocaleTimeString()}] [BACKUP] Backup completed. Written file: backup_manual_${Date.now()}.tar.gz (48.1 MB)`
-      ]);
-      setIsBackupRunning(false);
-      triggerToast("Backup snapshot completed successfully!");
-    }, 2500);
+    triggerToast("System management backend is not configured yet.", "info");
+    setIsBackupRunning(false);
   };
 
   const handleSaveSettings = (e) => {
     e.preventDefault();
-    triggerToast("Saving system configuration settings...");
-    setTimeout(() => {
-      triggerToast("Admin system configurations updated successfully!");
-    }, 1000);
+    triggerToast("Settings backend is not configured yet.", "info");
   };
 
   const markAllNotificationsAsRead = () => {
@@ -245,6 +382,25 @@ const AdminDashboard = ({ user, onLogout }) => {
   const activeCourses = coursesList.length;
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
+  // SVG Chart path calculation for daily sessions
+  const sessionsPointsList = dailySessions.map((m, idx) => {
+    const x = 40 + idx * 73;
+    const y = 170 - (m.activeSessions / 250) * 150; // Max scale of 250 for 150px height
+    return `${x},${y}`;
+  });
+
+  const dashboardLinePath = sessionsPointsList.length > 0
+    ? `M${sessionsPointsList.join(' L')}`
+    : '';
+
+  const dashboardAreaPath = sessionsPointsList.length > 0
+    ? `M40,170 L${sessionsPointsList.join(' L')} L478,170 Z`
+    : '';
+
+  const geminiPercent = modelRatios?.ratios?.gemini || 0;
+  const whisperPercent = modelRatios?.ratios?.whisper || 0;
+  const summarizerPercent = modelRatios?.ratios?.summarizer || 0;
+
   // Filtered lists
   const filteredUsers = usersList.filter(u => {
     const matchesSearch = u.name.toLowerCase().includes(userSearch.toLowerCase()) || 
@@ -254,9 +410,10 @@ const AdminDashboard = ({ user, onLogout }) => {
   });
 
   const filteredCourses = coursesList.filter(c => {
-    return c.name.toLowerCase().includes(courseSearch.toLowerCase()) || 
-           c.code.toLowerCase().includes(courseSearch.toLowerCase()) ||
-           c.instructor.toLowerCase().includes(courseSearch.toLowerCase());
+    const search = courseSearch.toLowerCase();
+    return (c.name || '').toLowerCase().includes(search) || 
+           (c.code || '').toLowerCase().includes(search) ||
+           (c.instructor || '').toLowerCase().includes(search);
   });
 
   return (
@@ -1333,7 +1490,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <Users className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="metric-value">{totalUsers}</div>
+                    <div className="metric-value">{overviewStats ? (overviewStats.totalStudents + overviewStats.totalFaculty) : totalUsers}</div>
                     <div className="metric-label">Total Users</div>
                   </div>
                 </div>
@@ -1343,7 +1500,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <GraduationCap className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="metric-value">{studentCount}</div>
+                    <div className="metric-value">{overviewStats ? overviewStats.totalStudents : studentCount}</div>
                     <div className="metric-label">Enrolled Students</div>
                   </div>
                 </div>
@@ -1353,7 +1510,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <Users className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="metric-value">{facultyCount}</div>
+                    <div className="metric-value">{overviewStats ? overviewStats.totalFaculty : facultyCount}</div>
                     <div className="metric-label">Active Faculty</div>
                   </div>
                 </div>
@@ -1363,7 +1520,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <BookOpen className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="metric-value">{activeCourses}</div>
+                    <div className="metric-value">{overviewStats ? overviewStats.totalCourses : activeCourses}</div>
                     <div className="metric-label">Active Courses</div>
                   </div>
                 </div>
@@ -1383,61 +1540,68 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                   {/* SVG Line Chart for AI calls */}
                   <div style={{ width: '100%', height: '200px', margin: '10px 0' }}>
-                    <svg viewBox="0 0 500 200" width="100%" height="100%" style={{ overflow: 'visible' }}>
-                      {/* Grid Lines */}
-                      <line x1="40" y1="20" x2="480" y2="20" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4" />
-                      <line x1="40" y1="70" x2="480" y2="70" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4" />
-                      <line x1="40" y1="120" x2="480" y2="120" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4" />
-                      <line x1="40" y1="170" x2="480" y2="170" stroke="#CBD5E1" strokeWidth="1.5" />
+                    {dailySessions.length > 0 ? (
+                      <svg viewBox="0 0 500 200" width="100%" height="100%" style={{ overflow: 'visible' }}>
+                        {/* Grid Lines */}
+                        <line x1="40" y1="20" x2="480" y2="20" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4" />
+                        <line x1="40" y1="70" x2="480" y2="70" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4" />
+                        <line x1="40" y1="120" x2="480" y2="120" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4" />
+                        <line x1="40" y1="170" x2="480" y2="170" stroke="#CBD5E1" strokeWidth="1.5" />
 
-                      {/* X-axis labels */}
-                      <text x="40" y="188" fill="#64748B" fontSize="10" textAnchor="middle" fontWeight="bold">Mon</text>
-                      <text x="113" y="188" fill="#64748B" fontSize="10" textAnchor="middle" fontWeight="bold">Tue</text>
-                      <text x="186" y="188" fill="#64748B" fontSize="10" textAnchor="middle" fontWeight="bold">Wed</text>
-                      <text x="259" y="188" fill="#64748B" fontSize="10" textAnchor="middle" fontWeight="bold">Thu</text>
-                      <text x="332" y="188" fill="#64748B" fontSize="10" textAnchor="middle" fontWeight="bold">Fri</text>
-                      <text x="405" y="188" fill="#64748B" fontSize="10" textAnchor="middle" fontWeight="bold">Sat</text>
-                      <text x="478" y="188" fill="#64748B" fontSize="10" textAnchor="middle" fontWeight="bold">Sun</text>
+                        {/* X-axis labels */}
+                        {dailySessions.map((m, idx) => {
+                          const x = 40 + idx * 73;
+                          const dateObj = new Date(m.date);
+                          const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                          return (
+                            <text key={idx} x={x} y="188" fill="#64748B" fontSize="10" textAnchor="middle" fontWeight="bold">
+                              {dayName}
+                            </text>
+                          );
+                        })}
 
-                      {/* Y-axis labels */}
-                      <text x="30" y="24" fill="#64748B" fontSize="10" textAnchor="end" fontWeight="bold">3,000</text>
-                      <text x="30" y="74" fill="#64748B" fontSize="10" textAnchor="end" fontWeight="bold">2,000</text>
-                      <text x="30" y="124" fill="#64748B" fontSize="10" textAnchor="end" fontWeight="bold">1,000</text>
-                      <text x="30" y="174" fill="#64748B" fontSize="10" textAnchor="end" fontWeight="bold">0</text>
+                        {/* Y-axis labels */}
+                        <text x="30" y="24" fill="#64748B" fontSize="10" textAnchor="end" fontWeight="bold">250</text>
+                        <text x="30" y="74" fill="#64748B" fontSize="10" textAnchor="end" fontWeight="bold">166</text>
+                        <text x="30" y="124" fill="#64748B" fontSize="10" textAnchor="end" fontWeight="bold">83</text>
+                        <text x="30" y="174" fill="#64748B" fontSize="10" textAnchor="end" fontWeight="bold">0</text>
 
-                      {/* Gradient definition for fill */}
-                      <defs>
-                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#4F46E5" stopOpacity="0.4" />
-                          <stop offset="100%" stopColor="#4F46E5" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
+                        {/* Gradient definition for fill */}
+                        <defs>
+                          <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#4F46E5" stopOpacity="0.4" />
+                            <stop offset="100%" stopColor="#4F46E5" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
 
-                      {/* Chart Area Fill */}
-                      <path
-                        d="M40,130 L113,85 L186,60 L259,105 L332,45 L405,120 L478,70 L478,170 L40,170 Z"
-                        fill="url(#chartGradient)"
-                      />
+                        {/* Chart Area Fill */}
+                        <path
+                          d={dashboardAreaPath}
+                          fill="url(#chartGradient)"
+                        />
 
-                      {/* Line Path */}
-                      <path
-                        d="M40,130 L113,85 L186,60 L259,105 L332,45 L405,120 L478,70"
-                        fill="none"
-                        stroke="#4F46E5"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
+                        {/* Line Path */}
+                        <path
+                          d={dashboardLinePath}
+                          fill="none"
+                          stroke="#4F46E5"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
 
-                      {/* Data Dots */}
-                      <circle cx="40" cy="130" r="4.5" fill="#4F46E5" stroke="white" strokeWidth="2" />
-                      <circle cx="113" cy="85" r="4.5" fill="#4F46E5" stroke="white" strokeWidth="2" />
-                      <circle cx="186" cy="60" r="4.5" fill="#4F46E5" stroke="white" strokeWidth="2" />
-                      <circle cx="259" cy="105" r="4.5" fill="#4F46E5" stroke="white" strokeWidth="2" />
-                      <circle cx="332" cy="45" r="4.5" fill="#4F46E5" stroke="white" strokeWidth="2" />
-                      <circle cx="405" cy="120" r="4.5" fill="#4F46E5" stroke="white" strokeWidth="2" />
-                      <circle cx="478" cy="70" r="4.5" fill="#4F46E5" stroke="white" strokeWidth="2" />
-                    </svg>
+                        {/* Data Dots */}
+                        {dailySessions.map((m, idx) => {
+                          const x = 40 + idx * 73;
+                          const y = 170 - (m.activeSessions / 250) * 150;
+                          return <circle key={idx} cx={x} cy={y} r="4.5" fill="#4F46E5" stroke="white" strokeWidth="2" />;
+                        })}
+                      </svg>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                        Loading platform activity analytics...
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '16px', fontSize: '13px' }}>
@@ -1461,40 +1625,40 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <div className="health-item-row">
                       <span className="health-label">Web Application Server</span>
                       <span className="health-status-indicator">
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-                        Operational
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: systemHealth ? '#10B981' : '#EF4444' }} />
+                        {systemHealth ? 'Operational' : 'Unreachable'}
                       </span>
                     </div>
 
                     <div className="health-item-row">
-                      <span className="health-label">PostgreSQL Database</span>
+                      <span className="health-label">MongoDB Database</span>
                       <span className="health-status-indicator">
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-                        Operational
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: systemHealth?.dbConnection === 'Healthy' ? '#10B981' : '#EF4444' }} />
+                        {systemHealth?.dbConnection || 'Offline'}
                       </span>
                     </div>
 
                     <div className="health-item-row">
                       <span className="health-label">Gemini AI Engine</span>
                       <span className="health-status-indicator">
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-                        Operational
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: systemHealth?.llmEndpoint === 'Operational' ? '#10B981' : '#EF4444' }} />
+                        {systemHealth?.llmEndpoint || 'Offline'}
                       </span>
                     </div>
 
                     <div className="health-item-row">
                       <span className="health-label">S3 Cloud Storage</span>
                       <span className="health-status-indicator">
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-                        Operational
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#94A3B8' }} />
+                        Not Monitored
                       </span>
                     </div>
 
                     <div className="health-item-row">
                       <span className="health-label">SMTP Mail Gateway</span>
                       <span className="health-status-indicator">
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-                        Operational
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#94A3B8' }} />
+                        Not Monitored
                       </span>
                     </div>
                   </div>
@@ -1502,9 +1666,10 @@ const AdminDashboard = ({ user, onLogout }) => {
                   <button 
                     className="btn-primary-rect" 
                     style={{ width: '100%', marginTop: '24px', justifyContent: 'center' }}
-                    onClick={() => {
-                      triggerToast("Starting network and service integrity checks...");
-                      setTimeout(() => triggerToast("Integrity verification completed. All checks passed!", "success"), 1200);
+                    onClick={async () => {
+                      triggerToast("Running system health diagnostics...");
+                      await fetchSystemHealth();
+                      triggerToast("Diagnostics completed. Dashboard refreshed!", "success");
                     }}
                   >
                     <RefreshCw className="h-4 w-4" />
@@ -1594,17 +1759,24 @@ const AdminDashboard = ({ user, onLogout }) => {
                           <td style={{ textAlign: 'right' }}>
                             <button 
                               className="btn-action-small"
-                              title="Simulated details edit"
-                              onClick={() => triggerToast(`Simulating details edit modal for ${item.name}`, 'info')}
+                              title="Edit user details"
+                              onClick={() => triggerToast(`Edit details for ${item.name} — coming soon.`, 'info')}
                             >
                               Edit
                             </button>
                             <button 
                               className="btn-action-small btn-action-danger"
                               style={{ color: 'var(--danger)', marginLeft: '8px' }}
-                              onClick={() => {
-                                setUsersList(prev => prev.map(u => u.id === item.id ? { ...u, status: u.status === 'Active' ? 'Inactive' : 'Active' } : u));
-                                triggerToast(`Updated status badge for ${item.name}!`);
+                              onClick={async () => {
+                                const newStatus = item.status === 'Active' ? 'Inactive' : 'Active';
+                                try {
+                                  await api.toggleUserStatus(item._id || item.id, newStatus);
+                                  setUsersList(prev => prev.map(u => (u._id || u.id) === (item._id || item.id) ? { ...u, status: newStatus } : u));
+                                  triggerToast(`${item.name} status updated to ${newStatus}!`);
+                                } catch (err) {
+                                  console.error(err);
+                                  triggerToast(err.message || "Failed to update user status", "error");
+                                }
                               }}
                             >
                               {item.status === 'Active' ? 'Deactivate' : 'Activate'}
@@ -1636,7 +1808,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 
                 <button 
                   className="btn-primary-rect" 
-                  onClick={() => triggerToast("Add new course profile flow is simulated.", "info")}
+                  onClick={() => setShowAddCourseModal(true)}
                 >
                   <Plus className="h-4 w-4" />
                   <span>Create Course</span>
@@ -1679,7 +1851,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                           <td style={{ textAlign: 'right' }}>
                             <button 
                               className="btn-action-small"
-                              onClick={() => triggerToast(`Simulating management panel for ${c.code}`, 'info')}
+                              onClick={() => triggerToast(`Course management panel for ${c.code} — coming soon.`, 'info')}
                             >
                               Manage Syllabus
                             </button>
@@ -1727,7 +1899,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                       </tr>
                     ) : (
                       moderationQueue.map((item) => (
-                        <tr key={item.id}>
+                        <tr key={item._id || item.id}>
                           <td>
                             <strong style={{ color: 'var(--text)' }}>{item.title}</strong>
                           </td>
@@ -1738,20 +1910,20 @@ const AdminDashboard = ({ user, onLogout }) => {
                           </td>
                           <td><strong style={{ color: 'var(--primary)' }}>{item.course}</strong></td>
                           <td>{item.submittedBy}</td>
-                          <td>{item.date}</td>
+                          <td>{item.date ? new Date(item.date).toLocaleDateString() : ''}</td>
                           <td style={{ color: 'var(--text-muted)' }}>{item.size}</td>
                           <td style={{ textAlign: 'right' }}>
                             <button 
                               className="btn-primary-rect" 
                               style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#10B981' }}
-                              onClick={() => handleApproveResource(item.id, item.title)}
+                              onClick={() => handleApproveResource(item._id || item.id, item.title)}
                             >
                               Approve
                             </button>
                             <button 
                               className="btn-primary-rect" 
                               style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#EF4444', marginLeft: '8px' }}
-                              onClick={() => handleRejectResource(item.id, item.title)}
+                              onClick={() => handleRejectResource(item._id || item.id, item.title)}
                             >
                               Reject
                             </button>
@@ -1768,6 +1940,11 @@ const AdminDashboard = ({ user, onLogout }) => {
           {/* E. AI MANAGEMENT VIEW */}
           {activeTab === 'ai' && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {!aiSettings ? (
+                <div className="gorgeous-card" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                  Loading AI Engine settings...
+                </div>
+              ) : (
               <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px' }} className="settings-layout">
                 {/* Latency & Token utilization panel */}
                 <div className="gorgeous-card">
@@ -1780,17 +1957,17 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Monthly Token Allocation Usage</span>
                       <span style={{ color: 'var(--text)' }}>
-                        {aiSettings.tokensUsed.toLocaleString()} / {aiSettings.maxTokenLimit.toLocaleString()} (42%)
+                        {aiSettings.tokensUsed?.toLocaleString() || 0} / {aiSettings.maxTokenLimit?.toLocaleString() || 0} ({aiSettings.maxTokenLimit > 0 ? Math.round((aiSettings.tokensUsed / aiSettings.maxTokenLimit) * 100) : 0}%)
                       </span>
                     </div>
 
                     <div className="progress-bar-fancy-container">
-                      <div className="progress-bar-fancy-fill" style={{ width: '42%' }} />
+                      <div className="progress-bar-fancy-fill" style={{ width: `${aiSettings.maxTokenLimit > 0 ? Math.round((aiSettings.tokensUsed / aiSettings.maxTokenLimit) * 100) : 0}%` }} />
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                      <span>Billing cycle resets: July 1, 2026</span>
-                      <span>Estimated charge: $42.18 USD</span>
+                      <span>Billing cycle resets: {(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); })()}</span>
+                      <span>Estimated charge: ${(aiSettings.tokensUsed ? (aiSettings.tokensUsed / 100000).toFixed(2) : '0.00')} USD</span>
                     </div>
                   </div>
 
@@ -1799,22 +1976,91 @@ const AdminDashboard = ({ user, onLogout }) => {
                   </h4>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
-                    <div style={{ padding: '16px', border: '1px solid var(--border)', borderRadius: '8px', backgroundColor: '#F8FAFC' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', textTransform: 'uppercase' }}>Gemini 1.5 Flash</span>
-                      <strong style={{ fontSize: '20px', color: 'var(--text)', display: 'block', margin: '4px 0' }}>840 ms</strong>
-                      <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>✓ Normal</span>
+                    <div style={{ padding: '16px', border: '1px solid var(--border)', borderRadius: '8px', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', textTransform: 'uppercase' }}>Gemini 1.5 Flash</span>
+                        <strong style={{ fontSize: '20px', color: 'var(--text)', display: 'block', margin: '4px 0' }}>{aiSettings.avgLatency || '—'} ms</strong>
+                        <span style={{ fontSize: '11px', color: aiSettings.geminiStatus === 'Operational' ? '#10B981' : '#EF4444', fontWeight: 'bold' }}>
+                          {aiSettings.geminiStatus === 'Operational' ? '✓ Normal' : '✗ Offline'}
+                        </span>
+                      </div>
+                      <button 
+                        className="btn-action-small" 
+                        style={{ marginTop: '12px', width: '100%', justifyContent: 'center' }}
+                        onClick={async () => {
+                          triggerToast("Testing connection to Gemini 1.5 Flash...");
+                          try {
+                            const res = await api.testAIConnection('gemini');
+                            if (res.success) {
+                              triggerToast(`Gemini: ${res.status || 'Connected'} (${res.latencyMs || 0}ms)`, 'success');
+                            } else {
+                              triggerToast("Gemini connection test failed", 'error');
+                            }
+                          } catch (err) {
+                            triggerToast("Gemini connection test failed", 'error');
+                          }
+                        }}
+                      >
+                        Test Connection
+                      </button>
                     </div>
 
-                    <div style={{ padding: '16px', border: '1px solid var(--border)', borderRadius: '8px', backgroundColor: '#F8FAFC' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', textTransform: 'uppercase' }}>Whisper Voice ASR</span>
-                      <strong style={{ fontSize: '20px', color: 'var(--text)', display: 'block', margin: '4px 0' }}>1,250 ms</strong>
-                      <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>✓ Operational</span>
+                    <div style={{ padding: '16px', border: '1px solid var(--border)', borderRadius: '8px', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', textTransform: 'uppercase' }}>Whisper Voice ASR</span>
+                        <strong style={{ fontSize: '20px', color: 'var(--text)', display: 'block', margin: '4px 0' }}>{aiSettings.whisperLatency || aiSettings.avgLatency || '—'} ms</strong>
+                        <span style={{ fontSize: '11px', color: aiSettings.whisperStatus === 'Operational' ? '#10B981' : '#EF4444', fontWeight: 'bold' }}>
+                          {aiSettings.whisperStatus === 'Operational' ? '✓ Operational' : '✗ Offline'}
+                        </span>
+                      </div>
+                      <button 
+                        className="btn-action-small" 
+                        style={{ marginTop: '12px', width: '100%', justifyContent: 'center' }}
+                        onClick={async () => {
+                          triggerToast("Testing connection to Whisper ASR...");
+                          try {
+                            const res = await api.testAIConnection('whisper');
+                            if (res.success) {
+                              triggerToast(`Whisper: ${res.status || 'Connected'} (${res.latencyMs || 0}ms)`, 'success');
+                            } else {
+                              triggerToast("Whisper connection test failed", 'error');
+                            }
+                          } catch (err) {
+                            triggerToast("Whisper connection test failed", 'error');
+                          }
+                        }}
+                      >
+                        Test Connection
+                      </button>
                     </div>
 
-                    <div style={{ padding: '16px', border: '1px solid var(--border)', borderRadius: '8px', backgroundColor: '#F8FAFC' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', textTransform: 'uppercase' }}>Syllabus Summarizer</span>
-                      <strong style={{ fontSize: '20px', color: 'var(--text)', display: 'block', margin: '4px 0' }}>450 ms</strong>
-                      <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 'bold' }}>✓ Excellent</span>
+                    <div style={{ padding: '16px', border: '1px solid var(--border)', borderRadius: '8px', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold', display: 'block', textTransform: 'uppercase' }}>Syllabus Summarizer</span>
+                        <strong style={{ fontSize: '20px', color: 'var(--text)', display: 'block', margin: '4px 0' }}>{aiSettings.summarizerLatency || aiSettings.avgLatency || '—'} ms</strong>
+                        <span style={{ fontSize: '11px', color: aiSettings.summarizerStatus === 'Operational' ? '#10B981' : '#EF4444', fontWeight: 'bold' }}>
+                          {aiSettings.summarizerStatus === 'Operational' ? '✓ Excellent' : '✗ Offline'}
+                        </span>
+                      </div>
+                      <button 
+                        className="btn-action-small" 
+                        style={{ marginTop: '12px', width: '100%', justifyContent: 'center' }}
+                        onClick={async () => {
+                          triggerToast("Testing connection to Summarizer...");
+                          try {
+                            const res = await api.testAIConnection('summarizer');
+                            if (res.success) {
+                              triggerToast(`Summarizer: ${res.status || 'Connected'} (${res.latencyMs || 0}ms)`, 'success');
+                            } else {
+                              triggerToast("Summarizer connection test failed", 'error');
+                            }
+                          } catch (err) {
+                            triggerToast("Summarizer connection test failed", 'error');
+                          }
+                        }}
+                      >
+                        Test Connection
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1833,10 +2079,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                     </div>
                     <button 
                       className={`toggle-switch-btn ${aiSettings.fallbackToPro ? 'active' : ''}`}
-                      onClick={() => {
-                        setAiSettings(prev => ({ ...prev, fallbackToPro: !prev.fallbackToPro }));
-                        triggerToast(`Fallback status: ${!aiSettings.fallbackToPro ? 'Active' : 'Disabled'}`);
-                      }}
+                      onClick={() => handleToggleAISetting('fallbackToPro')}
                     >
                       <div className="toggle-switch-handle" />
                     </button>
@@ -1849,10 +2092,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                     </div>
                     <button 
                       className={`toggle-switch-btn ${aiSettings.cacheResponses ? 'active' : ''}`}
-                      onClick={() => {
-                        setAiSettings(prev => ({ ...prev, cacheResponses: !prev.cacheResponses }));
-                        triggerToast(`Response caching: ${!aiSettings.cacheResponses ? 'Enabled' : 'Disabled'}`);
-                      }}
+                      onClick={() => handleToggleAISetting('cacheResponses')}
                     >
                       <div className="toggle-switch-handle" />
                     </button>
@@ -1862,14 +2102,14 @@ const AdminDashboard = ({ user, onLogout }) => {
                     className="btn-primary-rect" 
                     style={{ width: '100%', marginTop: '24px', justifyContent: 'center' }}
                     onClick={() => {
-                      triggerToast("Flushing AI prompt and response cache...");
-                      setTimeout(() => triggerToast("Cache memory cleared. 2.4 GB allocated freed.", "success"), 1000);
+                      triggerToast("Cache flush is not available — backend not configured.", "info");
                     }}
                   >
                     <span>Flush Cache Memory</span>
                   </button>
                 </div>
               </div>
+              )}
             </div>
           )}
 
@@ -1884,36 +2124,42 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <span>Daily Active Sessions</span>
                   </h3>
                   <div style={{ width: '100%', height: '220px', margin: '20px 0' }}>
-                    <svg viewBox="0 0 500 220" width="100%" height="100%">
-                      <line x1="40" y1="20" x2="480" y2="20" stroke="#E2E8F0" strokeWidth="1" />
-                      <line x1="40" y1="70" x2="480" y2="70" stroke="#E2E8F0" strokeWidth="1" />
-                      <line x1="40" y1="120" x2="480" y2="120" stroke="#E2E8F0" strokeWidth="1" />
-                      <line x1="40" y1="170" x2="480" y2="170" stroke="#E2E8F0" strokeWidth="1" />
+                    {dailySessions.length > 0 ? (
+                      <svg viewBox="0 0 500 220" width="100%" height="100%">
+                        <line x1="40" y1="20" x2="480" y2="20" stroke="#E2E8F0" strokeWidth="1" />
+                        <line x1="40" y1="70" x2="480" y2="70" stroke="#E2E8F0" strokeWidth="1" />
+                        <line x1="40" y1="120" x2="480" y2="120" stroke="#E2E8F0" strokeWidth="1" />
+                        <line x1="40" y1="170" x2="480" y2="170" stroke="#E2E8F0" strokeWidth="1" />
 
-                      <polyline
-                        fill="none"
-                        stroke="#10B981"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        points="40,150 113,120 186,80 259,130 332,60 405,140 478,50"
-                      />
-                      <circle cx="40" cy="150" r="4" fill="#10B981" />
-                      <circle cx="113" cy="120" r="4" fill="#10B981" />
-                      <circle cx="186" cy="80" r="4" fill="#10B981" />
-                      <circle cx="259" cy="130" r="4" fill="#10B981" />
-                      <circle cx="332" cy="60" r="4" fill="#10B981" />
-                      <circle cx="405" cy="140" r="4" fill="#10B981" />
-                      <circle cx="478" cy="50" r="4" fill="#10B981" />
-
-                      <text x="40" y="195" fill="#64748B" fontSize="9" textAnchor="middle">09 Jun</text>
-                      <text x="113" y="195" fill="#64748B" fontSize="9" textAnchor="middle">10 Jun</text>
-                      <text x="186" y="195" fill="#64748B" fontSize="9" textAnchor="middle">11 Jun</text>
-                      <text x="259" y="195" fill="#64748B" fontSize="9" textAnchor="middle">12 Jun</text>
-                      <text x="332" y="195" fill="#64748B" fontSize="9" textAnchor="middle">13 Jun</text>
-                      <text x="405" y="195" fill="#64748B" fontSize="9" textAnchor="middle">14 Jun</text>
-                      <text x="478" y="195" fill="#64748B" fontSize="9" textAnchor="middle">15 Jun</text>
-                    </svg>
+                        <polyline
+                          fill="none"
+                          stroke="#10B981"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          points={sessionsPointsList.join(' ')}
+                        />
+                        {dailySessions.map((m, idx) => {
+                          const x = 40 + idx * 73;
+                          const y = 170 - (m.activeSessions / 250) * 150;
+                          return <circle key={idx} cx={x} cy={y} r="4" fill="#10B981" />;
+                        })}
+                        {dailySessions.map((m, idx) => {
+                          const x = 40 + idx * 73;
+                          const dateObj = new Date(m.date);
+                          const formattedDate = dateObj.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+                          return (
+                            <text key={idx} x={x} y="195" fill="#64748B" fontSize="9" textAnchor="middle">
+                              {formattedDate}
+                            </text>
+                          );
+                        })}
+                      </svg>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                        Loading platform activity analytics...
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1924,30 +2170,38 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <span>AI Model API Call Ratios</span>
                   </h3>
                   <div style={{ width: '100%', height: '220px', margin: '20px 0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg viewBox="0 0 200 200" width="160" height="160">
-                      {/* Pie segments (Circle Dasharray math) */}
-                      {/* Segment 1: Gemini (65%): strokeDashoffset = 0 */}
-                      <circle cx="100" cy="100" r="70" fill="none" stroke="#4F46E5" strokeWidth="30" strokeDasharray="439.8" strokeDashoffset="0" transform="rotate(-90 100 100)" />
-                      {/* Segment 2: Whisper (25%): offset = -285.8 */}
-                      <circle cx="100" cy="100" r="70" fill="none" stroke="#10B981" strokeWidth="30" strokeDasharray="439.8" strokeDashoffset="-285.8" transform="rotate(-90 100 100)" />
-                      {/* Segment 3: Other modules (10%): offset = -395.8 */}
-                      <circle cx="100" cy="100" r="70" fill="none" stroke="#F59E0B" strokeWidth="30" strokeDasharray="439.8" strokeDashoffset="-395.8" transform="rotate(-90 100 100)" />
-                    </svg>
+                    {modelRatios ? (
+                      <>
+                        <svg viewBox="0 0 200 200" width="160" height="160">
+                          {/* Pie segments (Circle Dasharray math) */}
+                          {/* Segment 1: Gemini */}
+                          <circle cx="100" cy="100" r="70" fill="none" stroke="#4F46E5" strokeWidth="30" strokeDasharray="439.8" strokeDashoffset="0" transform="rotate(-90 100 100)" />
+                          {/* Segment 2: Whisper */}
+                          <circle cx="100" cy="100" r="70" fill="none" stroke="#10B981" strokeWidth="30" strokeDasharray="439.8" strokeDashoffset={- (geminiPercent / 100) * 439.8} transform="rotate(-90 100 100)" />
+                          {/* Segment 3: Summarizer */}
+                          <circle cx="100" cy="100" r="70" fill="none" stroke="#F59E0B" strokeWidth="30" strokeDasharray="439.8" strokeDashoffset={- ((geminiPercent + whisperPercent) / 100) * 439.8} transform="rotate(-90 100 100)" />
+                        </svg>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px', marginLeft: '24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4F46E5' }} />
-                        <span>Gemini Flash (65%)</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px', marginLeft: '24px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4F46E5' }} />
+                            <span>Gemini Flash ({geminiPercent}%)</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
+                            <span>Whisper ASR ({whisperPercent}%)</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F59E0B' }} />
+                            <span>Summarizer ({summarizerPercent}%)</span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ color: 'var(--text-muted)' }}>
+                        Loading model API ratio metrics...
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-                        <span>Whisper ASR (25%)</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F59E0B' }} />
-                        <span>Summarizer (10%)</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2048,25 +2302,25 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Disk Usage</span>
-                      <span style={{ color: 'var(--text)' }}>64.2 GB / 100 GB (64.2%)</span>
+                      <span style={{ color: 'var(--text)' }}>— / — (N/A)</span>
                     </div>
 
                     <div className="progress-bar-fancy-container" style={{ margin: '8px 0 16px 0' }}>
-                      <div className="progress-bar-fancy-fill" style={{ width: '64.2%', background: 'linear-gradient(90deg, #F59E0B 0%, #EF4444 100%)' }} />
+                      <div className="progress-bar-fancy-fill" style={{ width: '0%', background: 'linear-gradient(90deg, #F59E0B 0%, #EF4444 100%)' }} />
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Video Archives:</span>
-                        <strong style={{ color: 'var(--text)' }}>48.0 GB</strong>
+                        <strong style={{ color: 'var(--text)' }}>N/A</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Database Snapshots:</span>
-                        <strong style={{ color: 'var(--text)' }}>12.0 GB</strong>
+                        <strong style={{ color: 'var(--text)' }}>N/A</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Logs & Diagnostics:</span>
-                        <strong style={{ color: 'var(--text)' }}>4.2 GB</strong>
+                        <strong style={{ color: 'var(--text)' }}>N/A</strong>
                       </div>
                     </div>
                   </div>
@@ -2310,6 +2564,115 @@ const AdminDashboard = ({ user, onLogout }) => {
                 </button>
                 <button type="submit" className="btn-primary-rect">
                   Provision Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Course Modal */}
+      {showAddCourseModal && (
+        <div className="modal-overlay" onClick={() => setShowAddCourseModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Create New Course Profile</h3>
+              <button className="modal-close-btn" onClick={() => setShowAddCourseModal(false)}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCourseSubmit}>
+              <div className="modal-body">
+                <div className="form-group-control">
+                  <label className="form-label-styled">Course Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. CS201" 
+                    className="form-input-text"
+                    required
+                    value={newCourse.code}
+                    onChange={(e) => setNewCourse({...newCourse, code: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Course Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Data Structures & Algorithms" 
+                    className="form-input-text"
+                    required
+                    value={newCourse.name}
+                    onChange={(e) => setNewCourse({...newCourse, name: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Academic Semester</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 4th Semester" 
+                    className="form-input-text"
+                    required
+                    value={newCourse.semester}
+                    onChange={(e) => setNewCourse({...newCourse, semester: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Curriculum Department</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Computer Science" 
+                    className="form-input-text"
+                    required
+                    value={newCourse.department}
+                    onChange={(e) => setNewCourse({...newCourse, department: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Instructor Assigned</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Dr. Urvashi" 
+                    className="form-input-text"
+                    required
+                    value={newCourse.instructor}
+                    onChange={(e) => setNewCourse({...newCourse, instructor: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Weekly Schedule</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Mon, Wed, Fri (10:00 AM)" 
+                    className="form-input-text"
+                    value={newCourse.schedule}
+                    onChange={(e) => setNewCourse({...newCourse, schedule: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Initial Enrollments Count</label>
+                  <input 
+                    type="number" 
+                    placeholder="0" 
+                    className="form-input-text"
+                    value={newCourse.enrollments}
+                    onChange={(e) => setNewCourse({...newCourse, enrollments: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-cancel" onClick={() => setShowAddCourseModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary-rect">
+                  Create Course
                 </button>
               </div>
             </form>
