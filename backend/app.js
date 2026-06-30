@@ -30,13 +30,29 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api/admin', require("./modules/Admin/Notifications/NotificationsRoutes"));
 app.use('/api/admin', require("./modules/Admin/Settings/SettingsRoutes"));
 
-// app.use('/api/admin/system', require("./modules/Admin/SystemManagement/SystemManagementRoutes"));
+//app.use('/api/admin/system', require("./modules/Admin/SystemManagement/SystemManagementRoutes"));
+app.use(
+    "/api/admin",
+    require("./modules/Admin/SystemManagement/SystemManagementRoutes")
+);
 // app.use('/api/admin/user-management', require("./modules/Admin/UserManagement/UserManagementRoutes"));
+app.use(
+    "/api/admin",
+    require("./modules/Admin/UserManagement/UserManagementRoutes")
+);
 
 // ================= FACULTY =================
 
 // app.use('/api/faculty/ai', require("./modules/Faculty/AIAssistant/AIAssistantRoutes"));
+app.use(
+    "/api/faculty",
+    require("./modules/Faculty/AIAssistant/AIAssistantRoutes")
+);
 // app.use('/api/faculty/analytics', require("./modules/Faculty/Analytics/AnalyticsRoutes"));
+app.use(
+    "/api/faculty",
+    require("./modules/Faculty/Analytics/AnalyticsRoutes")
+);
 // app.use('/api/faculty/assignments', require("./modules/Faculty/Assignments/AssignmentsRoutes"));
 // app.use('/api/faculty/content-library', require("./modules/Faculty/ContentLibrary/ContentLibraryRoutes"));
 // app.use('/api/faculty/courses', require("./modules/Faculty/Courses/CoursesRoutes"));
