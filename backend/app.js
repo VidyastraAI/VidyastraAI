@@ -66,3 +66,22 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
+
+const messageRoutes = require("./modules/Faculty/Messages/MessagesRoutes");
+
+app.use("/api/faculty/messages", messageRoutes);
+const processingCenterRoutes = require("./modules/Faculty/ProcessingCenter/ProcessingCenterRoutes");
+
+app.use("/api/faculty/processing-center", processingCenterRoutes);
+
+const recordLectureRoutes = require("./modules/Faculty/RecordLecture/RecordLectureRoutes");
+
+app.use("/api/faculty/record-lecture", recordLectureRoutes);
+
+const settingsRoutes = require("./modules/Faculty/Settings/SettingsRoutes");
+
+app.use("/api/faculty/settings", settingsRoutes);
+
+const studentRoutes = require("./modules/Faculty/Students/StudentsRoutes");
+
+app.use("/api/faculty/students", studentRoutes);
