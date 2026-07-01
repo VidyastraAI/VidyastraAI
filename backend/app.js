@@ -29,7 +29,7 @@ app.use('/uploads', express.static('uploads'));
 
 // app.use('/api/faculty/ai', require("./modules/Faculty/AIAssistant/AIAssistantRoutes"));
 // app.use('/api/faculty/analytics', require("./modules/Faculty/Analytics/AnalyticsRoutes"));
-// app.use('/api/faculty/assignments', require("./modules/Faculty/Assignments/AssignmentsRoutes"));
+app.use('/api/faculty/assignments', require("./modules/Faculty/Assignments/AssignmentsRoutes"));
 // app.use('/api/faculty/content-library', require("./modules/Faculty/ContentLibrary/ContentLibraryRoutes"));
 // app.use('/api/faculty/courses', require("./modules/Faculty/Courses/CoursesRoutes"));
 // app.use('/api/faculty/dashboard', require("./modules/Faculty/Dashboard/DashboardRoutes"));
