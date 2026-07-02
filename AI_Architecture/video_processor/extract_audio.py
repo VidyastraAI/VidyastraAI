@@ -20,7 +20,7 @@ def extract_audio(video_path):
     )
 
     command = [
-        "ffmpeg",
+        "C:\\Users\\patel\\Downloads\\ffmpeg-8.1.1-essentials_build\\ffmpeg-8.1.1-essentials_build\\bin\\ffmpeg.exe",
         "-i",
         video_path,
         "-vn",

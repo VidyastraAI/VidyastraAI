@@ -14,6 +14,9 @@ backend/.env
 AI_Architecture/uploads/
 AI_Architecture/outputs/
 AI_Architecture/vectordb/
+AI_Architecture/venv/
+AI_Architecture/venv311/
+
 
 # Build Files
 frontend/dist/
