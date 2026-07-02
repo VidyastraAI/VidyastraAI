@@ -1,0 +1,6 @@
+/* Utility layout classes for the application */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
