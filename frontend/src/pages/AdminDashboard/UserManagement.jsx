@@ -10,7 +10,9 @@ const UserManagement = ({
   setShowAddUserModal,
   filteredUsers,
   triggerToast,
-  setUsersList
+  setUsersList,
+  setEditingUser,
+  setShowEditUserModal
 }) => {
   return (
     <div className="animate-fade-in">
@@ -91,7 +93,10 @@ const UserManagement = ({
                     <button 
                       className="btn-action-small"
                       title="Edit user details"
-                      onClick={() => triggerToast(`Edit details for ${item.name} — coming soon.`, 'info')}
+                      onClick={() => {
+                        setEditingUser(item);
+                        setShowEditUserModal(true);
+                      }}
                     >
                       Edit
                     </button>

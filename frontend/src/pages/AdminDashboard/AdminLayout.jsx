@@ -36,6 +36,10 @@ const AdminLayout = ({ user, onLogout }) => {
 
   // Users Directory State
   const [usersList, setUsersList] = useState([]);
+  const [editingUser, setEditingUser] = useState(null);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [showEditCourseModal, setShowEditCourseModal] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('All');
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -44,9 +48,9 @@ const AdminLayout = ({ user, onLogout }) => {
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
-    role: '',
+    role: 'Student',
     password: '',
-    dept: '',
+    dept: 'CSE',
     roll: ''
   });
 
@@ -219,6 +223,31 @@ const AdminLayout = ({ user, onLogout }) => {
     }
   }, [activeTab]);
 
+  const fetchSettings = async () => {
+    try {
+      const data = await api.getSettings();
+      setSettingsForm({
+        siteTitle: data.siteTitle || '',
+        adminEmail: data.adminEmail || '',
+        smtpHost: data.smtpHost || '',
+        smtpPort: data.smtpPort || '',
+        smtpUser: data.smtpUser || '',
+        smtpPass: data.smtpPass || '',
+        notifyOnNewUsers: data.notifyOnNewUsers || false,
+        requireEmailVerification: data.requireEmailVerification || false,
+        moderationAlerts: data.moderationAlerts || false
+      });
+    } catch (err) {
+      console.error("Failed to load settings:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'settings') {
+      fetchSettings();
+    }
+  }, [activeTab]);
+
   const fetchAnalytics = async () => {
     try {
       const [sessions, ratios] = await Promise.all([
@@ -275,13 +304,15 @@ const AdminLayout = ({ user, onLogout }) => {
       return;
     }
 
+    const backendRole = newUser.role?.toLowerCase() === 'faculty' ? 'teacher' : (newUser.role?.toLowerCase() || 'student');
+
     try {
       const res = await api.addUser({
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role,
+        role: backendRole,
         password: newUser.password || 'password123',
-        dept: newUser.dept,
+        dept: newUser.dept || 'CSE',
         roll: newUser.roll
       });
       const roleMap = { student: 'Student', teacher: 'Faculty', admin: 'Admin' };
@@ -292,9 +323,9 @@ const AdminLayout = ({ user, onLogout }) => {
       setNewUser({
         name: '',
         email: '',
-        role: '',
+        role: 'Student',
         password: '',
-        dept: '',
+        dept: 'CSE',
         roll: ''
       });
     } catch (err) {
@@ -348,16 +379,117 @@ const AdminLayout = ({ user, onLogout }) => {
     }
   };
 
-  const triggerManualBackup = () => {
+  const triggerManualBackup = async () => {
     if (isBackupRunning) return;
     setIsBackupRunning(true);
-    triggerToast("System management backend is not configured yet.", "info");
-    setIsBackupRunning(false);
+    triggerToast("Starting manual system backup...", "info");
+    try {
+      const res = await api.runSystemBackup();
+      if (res.success) {
+        triggerToast(`Backup completed successfully! Last backup: ${new Date(res.lastBackup).toLocaleString()}`, "success");
+      } else {
+        triggerToast("Backup failed.", "error");
+      }
+    } catch (err) {
+      triggerToast(err.message || "Backup failed.", "error");
+    } finally {
+      setIsBackupRunning(false);
+    }
   };
 
-  const handleSaveSettings = (e) => {
+  const handleSaveSettings = async (e) => {
     e.preventDefault();
-    triggerToast("Settings backend is not configured yet.", "info");
+    try {
+      const res = await api.updateSettings(settingsForm);
+      if (res.success) {
+        triggerToast("System settings updated successfully!");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast(err.message || "Failed to update settings", "error");
+    }
+  };
+
+  const handleEditUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    const backendRole = editingUser.role?.toLowerCase() === 'faculty' ? 'teacher' : (editingUser.role?.toLowerCase() || 'student');
+    try {
+      const res = await api.editUser(editingUser._id || editingUser.id, {
+        name: editingUser.name,
+        email: editingUser.email,
+        role: backendRole,
+        department: editingUser.dept,
+        status: editingUser.status,
+        details: { rollNo: editingUser.roll }
+      });
+      if (res.success) {
+        const roleMap = { student: 'Student', teacher: 'Faculty', admin: 'Admin' };
+        const u = res.user;
+        const mappedUser = {
+          ...u,
+          id: u._id || u.id,
+          role: roleMap[u.role?.toLowerCase()] || u.role,
+          dept: u.department || u.dept || '',
+          roll: u.details?.rollNo || u.roll || '',
+          status: u.status || 'Active'
+        };
+        setUsersList(prev => prev.map(item => (item._id || item.id) === (mappedUser._id || mappedUser.id) ? mappedUser : item));
+        setShowEditUserModal(false);
+        setEditingUser(null);
+        triggerToast(`User "${mappedUser.name}" details updated successfully!`);
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast(err.message || "Failed to update user details", "error");
+    }
+  };
+
+  const handleEditCourseSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingCourse) return;
+    try {
+      const res = await api.editCourse(editingCourse._id || editingCourse.id, {
+        name: editingCourse.name,
+        semester: editingCourse.semester,
+        department: editingCourse.department,
+        instructor: editingCourse.instructor,
+        schedule: editingCourse.schedule,
+        enrollments: editingCourse.enrollments
+      });
+      if (res.success) {
+        const c = res.course;
+        const mappedCourse = {
+          ...c,
+          id: c._id || c.id,
+          category: c.department || c.semester || '',
+          instructor: c.instructor || ''
+        };
+        setCoursesList(prev => prev.map(item => (item._id || item.id) === (mappedCourse._id || mappedCourse.id) ? mappedCourse : item));
+        setShowEditCourseModal(false);
+        setEditingCourse(null);
+        triggerToast(`Course "${mappedCourse.name}" details updated successfully!`);
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast(err.message || "Failed to update course details", "error");
+    }
+  };
+
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm("Are you sure you want to delete this course? This action cannot be undone.")) return;
+    try {
+      const res = await api.deleteCourse(courseId);
+      if (res.success) {
+        setCoursesList(prev => prev.filter(c => c._id !== courseId && c.id !== courseId));
+        setShowEditCourseModal(false);
+        setEditingCourse(null);
+        triggerToast("Course deleted successfully!");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast(err.message || "Failed to delete course", "error");
+    }
   };
 
   const markAllNotificationsAsRead = () => {
@@ -1276,6 +1408,8 @@ const AdminLayout = ({ user, onLogout }) => {
               filteredUsers={filteredUsers}
               triggerToast={triggerToast}
               setUsersList={setUsersList}
+              setEditingUser={setEditingUser}
+              setShowEditUserModal={setShowEditUserModal}
             />
           )}
 
@@ -1286,6 +1420,8 @@ const AdminLayout = ({ user, onLogout }) => {
               setShowAddCourseModal={setShowAddCourseModal}
               filteredCourses={filteredCourses}
               triggerToast={triggerToast}
+              setEditingCourse={setEditingCourse}
+              setShowEditCourseModal={setShowEditCourseModal}
             />
           )}
 
@@ -1553,6 +1689,219 @@ const AdminLayout = ({ user, onLogout }) => {
                 <button type="submit" className="btn-primary-rect">
                   Create Course
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditUserModal && editingUser && (
+        <div className="modal-overlay" onClick={() => { setShowEditUserModal(false); setEditingUser(null); }}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Edit User Details</h3>
+              <button className="modal-close-btn" onClick={() => { setShowEditUserModal(false); setEditingUser(null); }}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditUserSubmit}>
+              <div className="modal-body">
+                <div className="form-group-control">
+                  <label className="form-label-styled">Full Profile Name</label>
+                  <input 
+                    type="text" 
+                    className="form-input-text"
+                    required
+                    value={editingUser.name || ''}
+                    onChange={(e) => setEditingUser({...editingUser, name: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Active Email Address</label>
+                  <input 
+                    type="email" 
+                    className="form-input-text"
+                    required
+                    value={editingUser.email || ''}
+                    onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">System Permission Role</label>
+                  <select 
+                    className="form-select-styled"
+                    value={editingUser.role || 'Student'}
+                    onChange={(e) => setEditingUser({...editingUser, role: e.target.value})}
+                  >
+                    <option value="Student">Student</option>
+                    <option value="Faculty">Faculty</option>
+                    <option value="Admin">Admin</option>
+                  </select>
+                </div>
+
+                {editingUser.role === 'Faculty' && (
+                  <div className="form-group-control">
+                    <label className="form-label-styled">Faculty Assigned Department</label>
+                    <select 
+                      className="form-select-styled"
+                      value={editingUser.dept || 'CSE'}
+                      onChange={(e) => setEditingUser({...editingUser, dept: e.target.value})}
+                    >
+                      <option value="CSE">Computer Science & Engg.</option>
+                      <option value="IT">Information Technology</option>
+                      <option value="ECE">Electronics & Communication</option>
+                      <option value="ME">Mechanical Engineering</option>
+                    </select>
+                  </div>
+                )}
+
+                {editingUser.role === 'Student' && (
+                  <div className="form-group-control">
+                    <label className="form-label-styled">Student Roll Number (Optional)</label>
+                    <input 
+                      type="text" 
+                      className="form-input-text"
+                      value={editingUser.roll || ''}
+                      onChange={(e) => setEditingUser({...editingUser, roll: e.target.value})}
+                    />
+                  </div>
+                )}
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Account Status</label>
+                  <select 
+                    className="form-select-styled"
+                    value={editingUser.status || 'Active'}
+                    onChange={(e) => setEditingUser({...editingUser, status: e.target.value})}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-cancel" onClick={() => { setShowEditUserModal(false); setEditingUser(null); }}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary-rect">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Course Modal */}
+      {showEditCourseModal && editingCourse && (
+        <div className="modal-overlay" onClick={() => { setShowEditCourseModal(false); setEditingCourse(null); }}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Manage Course Details</h3>
+              <button className="modal-close-btn" onClick={() => { setShowEditCourseModal(false); setEditingCourse(null); }}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditCourseSubmit}>
+              <div className="modal-body">
+                <div className="form-group-control">
+                  <label className="form-label-styled">Course Code</label>
+                  <input 
+                    type="text" 
+                    className="form-input-text"
+                    disabled
+                    value={editingCourse.code || ''}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Course Name</label>
+                  <input 
+                    type="text" 
+                    className="form-input-text"
+                    required
+                    value={editingCourse.name || ''}
+                    onChange={(e) => setEditingCourse({...editingCourse, name: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Academic Semester</label>
+                  <input 
+                    type="text" 
+                    className="form-input-text"
+                    required
+                    value={editingCourse.semester || ''}
+                    onChange={(e) => setEditingCourse({...editingCourse, semester: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Curriculum Department</label>
+                  <input 
+                    type="text" 
+                    className="form-input-text"
+                    required
+                    value={editingCourse.department || ''}
+                    onChange={(e) => setEditingCourse({...editingCourse, department: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Instructor Assigned</label>
+                  <input 
+                    type="text" 
+                    className="form-input-text"
+                    required
+                    value={editingCourse.instructor || ''}
+                    onChange={(e) => setEditingCourse({...editingCourse, instructor: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Weekly Schedule</label>
+                  <input 
+                    type="text" 
+                    className="form-input-text"
+                    value={editingCourse.schedule || ''}
+                    onChange={(e) => setEditingCourse({...editingCourse, schedule: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group-control">
+                  <label className="form-label-styled">Enrollments Count</label>
+                  <input 
+                    type="number" 
+                    className="form-input-text"
+                    value={editingCourse.enrollments || 0}
+                    onChange={(e) => setEditingCourse({...editingCourse, enrollments: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button 
+                  type="button" 
+                  className="btn-primary-rect" 
+                  style={{ backgroundColor: 'var(--danger)' }}
+                  onClick={() => handleDeleteCourse(editingCourse._id || editingCourse.id)}
+                >
+                  Delete Course
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" className="btn-cancel" onClick={() => { setShowEditCourseModal(false); setEditingCourse(null); }}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-primary-rect">
+                    Save Changes
+                  </button>
+                </div>
               </div>
             </form>
           </div>

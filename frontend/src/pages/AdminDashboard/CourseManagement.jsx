@@ -6,7 +6,9 @@ const CourseManagement = ({
   setCourseSearch,
   setShowAddCourseModal,
   filteredCourses,
-  triggerToast
+  triggerToast,
+  setEditingCourse,
+  setShowEditCourseModal
 }) => {
   return (
     <div className="animate-fade-in">
@@ -67,9 +69,12 @@ const CourseManagement = ({
                   <td style={{ textAlign: 'right' }}>
                     <button 
                       className="btn-action-small"
-                      onClick={() => triggerToast(`Course management panel for ${c.code} — coming soon.`, 'info')}
+                      onClick={() => {
+                        setEditingCourse(c);
+                        setShowEditCourseModal(true);
+                      }}
                     >
-                      Manage Syllabus
+                      Manage Course
                     </button>
                   </td>
                 </tr>

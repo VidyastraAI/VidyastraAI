@@ -39,4 +39,4 @@ const moderationItemSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('AdminModerationItem', moderationItemSchema);
+module.exports = mongoose.model('AdminModerationItem', moderationItemSchema, 'moderationitems');

@@ -170,8 +170,18 @@ const AIManager = ({
             <button 
               className="btn-primary-rect" 
               style={{ width: '100%', marginTop: '24px', justifyContent: 'center' }}
-              onClick={() => {
-                triggerToast("Cache flush is not available — backend not configured.", "info");
+              onClick={async () => {
+                triggerToast("Flushing semantic query cache...", "info");
+                try {
+                  const res = await api.clearSystemCache();
+                  if (res.success) {
+                    triggerToast("Inference cache flushed successfully!", "success");
+                  } else {
+                    triggerToast("Failed to flush cache", "error");
+                  }
+                } catch (err) {
+                  triggerToast(err.message || "Failed to flush cache", "error");
+                }
               }}
             >
               <span>Flush Cache Memory</span>

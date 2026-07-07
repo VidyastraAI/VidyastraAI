@@ -209,6 +209,42 @@ const api = {
     });
   },
 
+  editCourse: async (courseId, updatedData) => {
+    return apiRequest(`/admin/courses/${courseId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedData)
+    });
+  },
+
+  deleteCourse: async (courseId) => {
+    return apiRequest(`/admin/courses/${courseId}`, {
+      method: 'DELETE'
+    });
+  },
+
+  clearSystemCache: async () => {
+    return apiRequest('/admin/system/cache', {
+      method: 'POST'
+    });
+  },
+
+  runSystemBackup: async () => {
+    return apiRequest('/admin/system/backup', {
+      method: 'POST'
+    });
+  },
+
+  getSettings: async () => {
+    return apiRequest('/admin/settings');
+  },
+
+  updateSettings: async (settings) => {
+    return apiRequest('/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings)
+    });
+  },
+
   getAuditLogs: async () => {
     return apiRequest('/admin/logs');
   },

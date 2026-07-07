@@ -32,7 +32,7 @@ const aiSettingsSchema = new mongoose.Schema({
   },
   tokensUsed: {
     type: Number,
-    default: 4218500
+    default: 0
   },
   geminiStatus: {
     type: String,
@@ -48,10 +48,10 @@ const aiSettingsSchema = new mongoose.Schema({
   },
   avgLatency: {
     type: Number,
-    default: 840
+    default: 0
   }
 }, {
   timestamps: true
 });
 
-module.exports = mongoose.model('AdminAISettings', aiSettingsSchema);
+module.exports = mongoose.model('AdminAISettings', aiSettingsSchema, 'aisettings');
