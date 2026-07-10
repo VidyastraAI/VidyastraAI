@@ -88,6 +88,7 @@ const StudentDashboard = ({ user, onLogout }) => {
 
   const [lectureSearch, setLectureSearch] = useState('');
   const [lectureFilter, setLectureFilter] = useState('All');
+  const [dashboardData, setDashboardData] = useState(null);
 
   const toggleLectureWatched = (id) => {
     setLectures(prev => prev.map(l => {

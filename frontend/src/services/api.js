@@ -235,6 +235,21 @@ const api = {
   },
 
   // --- STUDENT DASHBOARD ENDPOINTS ---
+
+  getStudentDashboard: async () => {
+  if (USE_MOCK) {
+    return {
+      attendance: 92,
+      quizPoints: 240,
+      subjectsEnrolled: 4,
+      lectureProgress: 75
+    };
+  } else {
+    return apiRequest('/student/dashboard');
+  }
+},  
+
+
   getStudentProfile: async () => {
     if (USE_MOCK) {
       const users = JSON.parse(localStorage.getItem('vidyastra_users') || '[]');
