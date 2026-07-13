@@ -29,6 +29,10 @@ app.use('/api/admin', require("./modules/Admin/SystemManagement/SystemManagement
 app.use('/api/faculty/ai', require("./modules/Faculty/AIAssistant/AIAssistantRoutes"));
 app.use('/api/faculty/analytics', require("./modules/Faculty/Analytics/AnalyticsRoutes"));
 app.use('/api/faculty/assignments', require("./modules/Faculty/Assignments/AssignmentsRoutes"));
+app.use("/api/faculty/content-library", require("./modules/Faculty/ContentLibrary/ContentLibraryRoutes"));
+app.use("/api/faculty/courses", require("./modules/Faculty/Courses/CoursesRoutes"));
+app.use("/api/faculty/dashboard",require("./modules/Faculty/Dashboard/DashboardRoutes"));
+app.use("/api/faculty/live-classes",require("./modules/Faculty/LiveClass/LiveClassRoutes"));
 app.use('/api/faculty/messages', require("./modules/Faculty/Messages/MessagesRoutes"));
 app.use('/api/faculty/processing-center', require("./modules/Faculty/ProcessingCenter/ProcessingCenterRoutes"));
 app.use('/api/faculty/record-lecture', require("./modules/Faculty/RecordLecture/RecordLectureRoutes"));

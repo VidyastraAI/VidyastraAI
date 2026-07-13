@@ -145,7 +145,6 @@ exports.gradeAssignment = async (req, res) => {
 
 };
 
-
 // Delete Assignment (Optional)
 
 exports.deleteAssignment = async (req, res) => {
