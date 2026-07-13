@@ -261,6 +261,111 @@ const api = {
     }
   },
 
+  getLectures: async () => {
+  if (USE_MOCK) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const stored = localStorage.getItem('vidyastra_lectures');
+    if (stored) return JSON.parse(stored);
+
+    const defaultLectures = [
+      { id: 1, topic: 'Introduction to React Hooks', subject: 'DSA', duration: '45 mins', date: '2026-06-08', watched: true },
+      { id: 2, topic: 'Arrays and Linked Lists', subject: 'DSA', duration: '52 mins', date: '2026-06-09', watched: true },
+      { id: 3, topic: 'Binary Search Trees & Operations', subject: 'DSA', duration: '58 mins', date: '2026-06-11', watched: true },
+      { id: 4, topic: 'Graph Traversals (BFS & DFS)', subject: 'DSA', duration: '50 mins', date: '2026-06-14', watched: false },
+      { id: 5, topic: 'Introduction to DBMS & Architecture', subject: 'DBMS', duration: '40 mins', date: '2026-06-05', watched: true },
+      { id: 6, topic: 'Entity-Relationship Models', subject: 'DBMS', duration: '55 mins', date: '2026-06-07', watched: true },
+      { id: 7, topic: 'Relational Algebra Concepts', subject: 'DBMS', duration: '48 mins', date: '2026-06-10', watched: true },
+      { id: 8, topic: 'SQL Joins and Subqueries', subject: 'DBMS', duration: '60 mins', date: '2026-06-13', watched: false },
+      { id: 9, topic: 'Processes, Threads & Concurrency', subject: 'OS', duration: '51 mins', date: '2026-06-04', watched: true },
+      { id: 10, topic: 'CPU Scheduling Algorithms', subject: 'OS', duration: '59 mins', date: '2026-06-12', watched: false },
+      { id: 11, topic: 'Introduction to Computer Networks', subject: 'CN', duration: '42 mins', date: '2026-06-03', watched: true },
+      { id: 12, topic: 'OSI & TCP/IP Layer Models', subject: 'CN', duration: '56 mins', date: '2026-06-12', watched: false }
+    ];
+
+    localStorage.setItem('vidyastra_lectures', JSON.stringify(defaultLectures));
+    return defaultLectures;
+  } else {
+    return apiRequest('/student/lecture-library');
+  }
+},
+
+toggleLectureWatched: async (lectureId) => {
+  if (USE_MOCK) {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const lectures = JSON.parse(localStorage.getItem('vidyastra_lectures') || '[]');
+    const updated = lectures.map(l => l.id === lectureId ? { ...l, watched: !l.watched } : l);
+    localStorage.setItem('vidyastra_lectures', JSON.stringify(updated));
+    return { success: true };
+  } else {
+    return apiRequest(`/student/lecture-library/${lectureId}/toggle`, { method: 'PATCH' });
+  }
+},
+
+getNotifications: async () => {
+  if (USE_MOCK) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const stored = localStorage.getItem('vidyastra_notifications');
+    if (stored) return JSON.parse(stored);
+
+    const defaultNotifications = [
+      { id: 1, text: "Assignment 4: SQL Practice Set is now open.", time: "10 mins ago", read: false },
+      { id: 2, text: "Dr. Sarah Verma scheduled an extra session for DSA tomorrow.", time: "2 hrs ago", read: false },
+      { id: 3, text: "Your OS: Custom Shell Scripting assignment has been submitted.", time: "1 day ago", read: true },
+      { id: 4, text: "New lecture added: OSI Layer Protocols.", time: "2 days ago", read: true },
+      { id: 5, text: "AI generated a new study summary for DBMS Normalization.", time: "3 days ago", read: true }
+    ];
+
+    localStorage.setItem('vidyastra_notifications', JSON.stringify(defaultNotifications));
+    return defaultNotifications;
+  } else {
+    return apiRequest('/student/notifications');
+  }
+},
+
+markAllNotificationsRead: async () => {
+  if (USE_MOCK) {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const notifications = JSON.parse(localStorage.getItem('vidyastra_notifications') || '[]');
+    const updated = notifications.map(n => ({ ...n, read: true }));
+    localStorage.setItem('vidyastra_notifications', JSON.stringify(updated));
+    return { success: true };
+  } else {
+    return apiRequest('/student/notifications/mark-all-read', { method: 'PATCH' });
+  }
+},
+
+getProgress: async () => {
+  if (USE_MOCK) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const stored = localStorage.getItem('vidyastra_progress');
+    if (stored) return JSON.parse(stored);
+
+    const defaultProgress = {
+      studyTime: [
+        { day: 'Mon', hrs: 4 },
+        { day: 'Tue', hrs: 5 },
+        { day: 'Wed', hrs: 3 },
+        { day: 'Thu', hrs: 6 },
+        { day: 'Fri', hrs: 4 },
+        { day: 'Sat', hrs: 7 },
+        { day: 'Sun', hrs: 5 }
+      ],
+      topicMastery: [
+        { topic: 'Recursion & Sorting (DSA)', value: 90, color: '#10B981' },
+        { topic: 'Relational Algebra (DBMS)', value: 70, color: '#3B82F6' },
+        { topic: 'Process & CPU Scheduling (OS)', value: 50, color: '#F59E0B' },
+        { topic: 'Routing Protocols & IP Address Class (CN)', value: 30, color: '#EF4444' }
+      ]
+    };
+
+    localStorage.setItem('vidyastra_progress', JSON.stringify(defaultProgress));
+    return defaultProgress;
+  } else {
+    return apiRequest('/student/progress');
+  }
+},
+
+
   getStudentRecentActivity: async () => {
     if (USE_MOCK) {
       await new Promise(resolve => setTimeout(resolve, 300));

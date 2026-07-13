@@ -55,51 +55,76 @@ const StudentDashboard = ({ user, onLogout }) => {
   });
 
   // Notifications State
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "Assignment 4: SQL Practice Set is now open.", time: "10 mins ago", read: false },
-    { id: 2, text: "Dr. Sarah Verma scheduled an extra session for DSA tomorrow.", time: "2 hrs ago", read: false },
-    { id: 3, text: "Your OS: Custom Shell Scripting assignment has been submitted.", time: "1 day ago", read: true },
-    { id: 4, text: "New lecture added: OSI Layer Protocols.", time: "2 days ago", read: true },
-    { id: 5, text: "AI generated a new study summary for DBMS Normalization.", time: "3 days ago", read: true }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
-  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+const loadNotifications = async () => {
+  try {
+    const data = await api.getNotifications();
+    setNotifications(data);
+  } catch (err) {
+    console.error("Failed to load notifications:", err);
+  }
+};
 
-  const markAllNotificationsRead = () => {
+const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+
+const markAllNotificationsRead = async () => {
+  try {
+    await api.markAllNotificationsRead();
     setNotifications(notifications.map(n => ({ ...n, read: true })));
     triggerToast("All notifications marked as read!");
-  };
-
+  } catch (err) {
+    console.error("Failed to mark notifications read:", err);
+  }
+};
   // Lecture Library State
-  const [lectures, setLectures] = useState([
-    { id: 1, topic: 'Introduction to React Hooks', subject: 'DSA', duration: '45 mins', date: '2026-06-08', watched: true },
-    { id: 2, topic: 'Arrays and Linked Lists', subject: 'DSA', duration: '52 mins', date: '2026-06-09', watched: true },
-    { id: 3, topic: 'Binary Search Trees & Operations', subject: 'DSA', duration: '58 mins', date: '2026-06-11', watched: true },
-    { id: 4, topic: 'Graph Traversals (BFS & DFS)', subject: 'DSA', duration: '50 mins', date: '2026-06-14', watched: false },
-    { id: 5, topic: 'Introduction to DBMS & Architecture', subject: 'DBMS', duration: '40 mins', date: '2026-06-05', watched: true },
-    { id: 6, topic: 'Entity-Relationship Models', subject: 'DBMS', duration: '55 mins', date: '2026-06-07', watched: true },
-    { id: 7, topic: 'Relational Algebra Concepts', subject: 'DBMS', duration: '48 mins', date: '2026-06-10', watched: true },
-    { id: 8, topic: 'SQL Joins and Subqueries', subject: 'DBMS', duration: '60 mins', date: '2026-06-13', watched: false },
-    { id: 9, topic: 'Processes, Threads & Concurrency', subject: 'OS', duration: '51 mins', date: '2026-06-04', watched: true },
-    { id: 10, topic: 'CPU Scheduling Algorithms', subject: 'OS', duration: '59 mins', date: '2026-06-12', watched: false },
-    { id: 11, topic: 'Introduction to Computer Networks', subject: 'CN', duration: '42 mins', date: '2026-06-03', watched: true },
-    { id: 12, topic: 'OSI & TCP/IP Layer Models', subject: 'CN', duration: '56 mins', date: '2026-06-12', watched: false }
-  ]);
+  const [lectures, setLectures] = useState([]);
 
   const [lectureSearch, setLectureSearch] = useState('');
   const [lectureFilter, setLectureFilter] = useState('All');
   const [dashboardData, setDashboardData] = useState(null);
 
-  const toggleLectureWatched = (id) => {
-    setLectures(prev => prev.map(l => {
-      if (l.id === id) {
-        const nextState = !l.watched;
-        triggerToast(`Marked "${l.topic}" as ${nextState ? 'Watched' : 'Unwatched'}`);
-        return { ...l, watched: nextState };
-      }
-      return l;
+  const loadDashboard = async () => {
+  try {
+    const data = await api.getStudentProfile();
+
+    console.log("Dashboard Data:", data);
+
+    setDashboardData(data);
+
+    setProfile(prev => ({
+      ...prev,
+      name: data.name || prev.name,
+      email: data.email || prev.email,
+      degree: data.department || prev.degree,
+      semester: data.details?.semester || prev.semester,
+      rollNo: data.details?.rollNo || prev.rollNo
     }));
-  };
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const loadLectures = async () => {
+  try {
+    const data = await api.getLectures();
+    setLectures(data);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+  const toggleLectureWatched = async (id) => {
+  await api.toggleLectureWatched(id);
+  setLectures(prev => prev.map(l => {
+    if (l.id === id) {
+      const nextState = !l.watched;
+      triggerToast(`Marked "${l.topic}" as ${nextState ? 'Watched' : 'Unwatched'}`);
+      return { ...l, watched: nextState };
+    }
+    return l;
+  }));
+};
 
   // Compute stats in real-time
   const watchedLecturesCount = lectures.filter(l => l.watched).length;
@@ -122,6 +147,17 @@ const StudentDashboard = ({ user, onLogout }) => {
   ]);
 
   const [expandedNoteId, setExpandedNoteId] = useState(null);
+
+  const [progressData, setProgressData] = useState({ studyTime: [], topicMastery: [] });
+
+const loadProgress = async () => {
+  try {
+    const data = await api.getProgress();
+    setProgressData(data);
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   const handleDownloadNote = (title) => {
     triggerToast(`Initializing AI packaging...`);
@@ -333,6 +369,11 @@ const StudentDashboard = ({ user, onLogout }) => {
     scrollChatToBottom();
   }, [chatMessages, aiTyping]);
 
+  useEffect(() => {
+  loadDashboard();
+  loadLectures();
+  loadProgress();
+}, []);
   const handleSendChatMessage = async (textToSend) => {
     if (!textToSend.trim()) return;
 
@@ -2246,25 +2287,17 @@ const StudentDashboard = ({ user, onLogout }) => {
                   </h3>
                   
                   <div className="chart-svg-container" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '20px' }}>
-                    {/* SVG/CSS Line/Bar Graph representation */}
-                    {[
-                      { day: 'Mon', hrs: 4, height: '40%' },
-                      { day: 'Tue', hrs: 5, height: '50%' },
-                      { day: 'Wed', hrs: 3, height: '30%' },
-                      { day: 'Thu', hrs: 6, height: '60%' },
-                      { day: 'Fri', hrs: 4, height: '40%' },
-                      { day: 'Sat', hrs: 7, height: '70%' },
-                      { day: 'Sun', hrs: 5, height: '50%' }
-                    ].map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                        <span style={{ fontSize: '11px', fontWeight: '700', marginBottom: '8px' }}>{item.hrs}h</span>
-                        <div style={{ width: '100%', height: '110px', backgroundColor: '#E2E8F0', borderRadius: '4px', position: 'relative', display: 'flex', alignItems: 'flex-end' }}>
-                          <div style={{ width: '100%', height: item.height, background: 'linear-gradient(to top, var(--primary) 0%, #818CF8 100%)', borderRadius: '4px', transition: 'height 0.8s ease-out' }} />
-                        </div>
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', fontWeight: '500' }}>{item.day}</span>
-                      </div>
-                    ))}
-                  </div>
+  {/* SVG/CSS Line/Bar Graph representation */}
+  {progressData.studyTime.map((item, idx) => (
+    <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+      <span style={{ fontSize: '11px', fontWeight: '700', marginBottom: '8px' }}>{item.hrs}h</span>
+      <div style={{ width: '100%', height: '110px', backgroundColor: '#E2E8F0', borderRadius: '4px', position: 'relative', display: 'flex', alignItems: 'flex-end' }}>
+        <div style={{ width: '100%', height: `${item.hrs * 10}%`, background: 'linear-gradient(to top, var(--primary) 0%, #818CF8 100%)', borderRadius: '4px', transition: 'height 0.8s ease-out' }} />
+      </div>
+      <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', fontWeight: '500' }}>{item.day}</span>
+    </div>
+  ))}
+</div>
                 </div>
 
                 <div className="dashboard-main-grid">
@@ -2274,23 +2307,18 @@ const StudentDashboard = ({ user, onLogout }) => {
                       <BookOpenCheck className="h-4 w-4 text-emerald-500" /> Topic Mastery Breakdown
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {[
-                        { topic: 'Recursion & Sorting (DSA)', value: 90, color: '#10B981' },
-                        { topic: 'Relational Algebra (DBMS)', value: 70, color: '#3B82F6' },
-                        { topic: 'Process & CPU Scheduling (OS)', value: 50, color: '#F59E0B' },
-                        { topic: 'Routing Protocols & IP Address Class (CN)', value: 30, color: '#EF4444' }
-                      ].map((mastery, idx) => (
-                        <div key={idx}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>
-                            <span>{mastery.topic}</span>
-                            <span>{mastery.value}%</span>
-                          </div>
-                          <div className="fancy-progress-bar-container">
-                            <div className="fancy-progress-bar-fill" style={{ width: `${mastery.value}%`, backgroundColor: mastery.color }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+  {progressData.topicMastery.map((mastery, idx) => (
+    <div key={idx}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>
+        <span>{mastery.topic}</span>
+        <span>{mastery.value}%</span>
+      </div>
+      <div className="fancy-progress-bar-container">
+        <div className="fancy-progress-bar-fill" style={{ width: `${mastery.value}%`, backgroundColor: mastery.color }} />
+      </div>
+    </div>
+  ))}
+</div>
                   </div>
 
                   {/* Weak Topics */}

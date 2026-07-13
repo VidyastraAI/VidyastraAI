@@ -1,40 +1,31 @@
 const mongoose = require("mongoose");
 
-const lectureLibrarySchema = new mongoose.Schema(
-{
-    title: {
+const lectureLibrarySchema = new mongoose.Schema({
+    id: {
+        type: Number,
+        required: true,
+        unique: true
+    },
+    topic: {
         type: String,
         required: true
     },
-
-    courseCode: {
+    subject: {
         type: String,
         required: true
     },
-
-    facultyName: {
+    duration: {
         type: String,
         required: true
     },
-
-    resourceType: {
-        type: String,
-        enum: ["PDF", "VIDEO", "NOTES"],
-        required: true
-    },
-
-    resourceUrl: {
+    date: {
         type: String,
         required: true
     },
-
-    uploadDate: {
-        type: Date,
-        default: Date.now
+    watched: {
+        type: Boolean,
+        default: false
     }
 });
 
-module.exports = mongoose.model(
-    "LectureLibrary",
-    lectureLibrarySchema
-);
+module.exports = mongoose.model("LectureLibrary", lectureLibrarySchema);

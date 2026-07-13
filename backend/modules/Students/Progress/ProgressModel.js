@@ -1,38 +1,15 @@
 const mongoose = require("mongoose");
 
 const progressSchema = new mongoose.Schema({
-    studentId: {
-        type: String,
-        required: true
-    },
-
-    courseCode: {
-        type: String,
-        required: true
-    },
-
-    completionPercentage: {
-        type: Number,
-        default: 0
-    },
-
-    attendancePercentage: {
-        type: Number,
-        default: 0
-    },
-
-    assignmentScore: {
-        type: Number,
-        default: 0
-    },
-
-    quizScore: {
-        type: Number,
-        default: 0
-    }
+    studyTime: [{
+        day: { type: String, required: true },
+        hrs: { type: Number, required: true }
+    }],
+    topicMastery: [{
+        topic: { type: String, required: true },
+        value: { type: Number, required: true },
+        color: { type: String, required: true }
+    }]
 });
 
-module.exports = mongoose.model(
-    "Progress",
-    progressSchema
-);
+module.exports = mongoose.model("Progress", progressSchema);

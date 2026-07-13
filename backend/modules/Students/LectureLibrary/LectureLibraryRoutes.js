@@ -1,17 +1,8 @@
 const express = require("express");
-
 const router = express.Router();
-
-const {
-    getAllLectures,
-    getLectureByCourse
-} = require("./LectureLibraryController");
+const { getAllLectures, toggleWatched } = require("./LectureLibraryController");
 
 router.get("/", getAllLectures);
-
-router.get(
-    "/course/:courseCode",
-    getLectureByCourse
-);
+router.patch("/:id/toggle", toggleWatched);
 
 module.exports = router;
