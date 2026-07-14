@@ -28,4 +28,4 @@ const DashboardSchema = new mongoose.Schema({
     }
 });
 
-module.exports = mongoose.model("StudentsDashboard", DashboardSchema);
+module.exports = mongoose.model("Dashboard", DashboardSchema);
